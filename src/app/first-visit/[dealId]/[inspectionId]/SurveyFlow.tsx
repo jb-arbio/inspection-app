@@ -9,6 +9,7 @@ import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { downloadInspectionZip } from '@/lib/firstVisit/export';
+import { SyncBadge } from '@/components/firstVisit/SyncBadge';
 
 export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; inspectionId: string }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
@@ -75,7 +76,7 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">First Visit</h1>
           <div className="flex items-center gap-2 text-xs">
-            <span>{pending} pending</span>
+            <SyncBadge pending={pending} syncing={syncing} />
             <button
               onClick={syncNow}
               disabled={syncing}
