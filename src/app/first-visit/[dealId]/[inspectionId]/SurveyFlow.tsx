@@ -57,6 +57,16 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
     await enqueue('answer_upsert', row);
   };
 
+  const submit = async () => {
+    if (!confirm('Submit this visit? You will not be able to edit it after.')) return;
+    await localDb.inspections.update(inspectionId, {
+      status: 'submitted',
+      submitted_at: new Date().toISOString(),
+    });
+    await enqueue('submit', { inspection_id: inspectionId });
+    syncNow().catch(() => {});
+  };
+
   const grouped = byArea(DEV_QUESTIONS);
 
   return (
@@ -106,6 +116,9 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
           </div>
         </section>
       ))}
+      <button onClick={submit} className="mt-6 w-full rounded-md bg-black px-4 py-3 text-white">
+        Submit visit
+      </button>
     </main>
   );
 }
