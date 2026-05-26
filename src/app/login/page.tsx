@@ -1,13 +1,17 @@
 'use client';
 import { createBrowserClient } from '@supabase/ssr';
 
-export default function LoginPage() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_HUB_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_HUB_SUPABASE_ANON_KEY!,
-  );
+export const dynamic = 'force-dynamic';
 
+export default function LoginPage() {
   const signIn = async () => {
+    const url = process.env.NEXT_PUBLIC_HUB_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_HUB_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      alert('Hub Supabase env vars are not configured.');
+      return;
+    }
+    const supabase = createBrowserClient(url, key);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
