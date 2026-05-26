@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
+import { getHubServerClient } from '@/lib/firstVisit/hubSupabaseAdmin';
 
 export async function GET() {
-  const supabase = getHubSupabase();
+  const supabase = getHubServerClient(getHubSupabase());
   if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
   const { data, error } = await supabase
     .from('deals')
@@ -14,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = getHubSupabase();
+  const supabase = getHubServerClient(getHubSupabase());
   if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
 
   const body = await req.json().catch(() => ({}));

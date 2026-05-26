@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
+import { getHubRouteContext } from '@/lib/firstVisit/hubSupabaseAdmin';
 import { logValueSubmitted } from '@/lib/firstVisit/activityLog';
 import { resolveScopeId, type DataPointLevel } from '@/lib/firstVisit/resolveScope';
 
 export async function POST(req: Request) {
-  const supabase = getHubSupabase();
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+  const auth = await getHubRouteContext(getHubSupabase());
+  if (!auth) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+  const { supabase, email } = auth;
 
   const { inspection_id } = await req.json();
 
@@ -67,7 +66,7 @@ export async function POST(req: Request) {
       scope_id,
       source: 'staff_first_visit',
       value: a.value,
-      actor_name: user.email!,
+      actor_name: email,
     });
   }
 

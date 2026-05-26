@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
+import { getHubRouteContext } from '@/lib/firstVisit/hubSupabaseAdmin';
 
 export async function POST(req: Request) {
-  const supabase = getHubSupabase();
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+  const ctx = await getHubRouteContext(getHubSupabase());
+  if (!ctx) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+  const { supabase, email } = ctx;
 
   const body = await req.json();
   const row = {
@@ -15,7 +14,7 @@ export async function POST(req: Request) {
     location_id: body.location_id ?? null,
     unit_category_id: body.unit_category_id ?? null,
     status: body.status ?? 'draft',
-    inspector_email: user.email,
+    inspector_email: email,
     started_at: body.started_at ?? new Date().toISOString(),
     submitted_at: body.submitted_at ?? null,
   };
