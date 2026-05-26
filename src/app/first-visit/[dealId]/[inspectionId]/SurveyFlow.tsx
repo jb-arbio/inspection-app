@@ -8,6 +8,7 @@ import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
+import { downloadInspectionZip } from '@/lib/firstVisit/export';
 
 export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; inspectionId: string }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
@@ -72,6 +73,7 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
             >
               {syncing ? 'Syncing…' : 'Sync now'}
             </button>
+            <button onClick={() => downloadInspectionZip(inspectionId)} className="rounded border border-gray-300 px-2 py-0.5 text-xs">Export</button>
           </div>
         </div>
       </header>
