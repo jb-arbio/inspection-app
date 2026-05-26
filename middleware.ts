@@ -5,6 +5,11 @@ import { isAllowedEmail } from '@/lib/firstVisit/auth';
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
 
+  // Dev-only bypass for local UI preview without OAuth wiring.
+  if (process.env.NEXT_PUBLIC_DEV_SKIP_AUTH === '1') {
+    return NextResponse.next();
+  }
+
   // Allow auth callback and public assets through.
   if (
     url.pathname.startsWith('/auth/callback') ||
@@ -13,6 +18,16 @@ export async function middleware(req: NextRequest) {
     url.pathname === '/favicon.ico'
   ) {
     return NextResponse.next();
+  }
+
+  // Bail if hub Supabase env isn't configured (e.g. local preview without secrets).
+  if (
+    !process.env.NEXT_PUBLIC_HUB_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_HUB_SUPABASE_ANON_KEY
+  ) {
+    if (url.pathname === '/login') return NextResponse.next();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
   }
 
   const res = NextResponse.next();
