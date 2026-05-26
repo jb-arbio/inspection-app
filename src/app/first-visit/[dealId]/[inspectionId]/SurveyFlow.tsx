@@ -6,9 +6,12 @@ import { localDb, type LocalAnswer } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
+import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
 
 export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; inspectionId: string }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
+  const [snapshot, setSnapshot] = useState<HubSnapshot | null>(null);
+  const [unitCategoryId, setUnitCategoryId] = useState<string | undefined>(undefined);
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
 
@@ -21,6 +24,14 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
       setAnswers(map);
     })();
   }, [inspectionId]);
+
+  useEffect(() => {
+    fetch(`/api/first-visit/deals/${dealId}/snapshot`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setSnapshot)
+      .catch(() => setSnapshot(null));
+    localDb.inspections.get(inspectionId).then((i) => setUnitCategoryId(i?.unit_category_id));
+  }, [dealId, inspectionId]);
 
   const onChange = async (q: FirstVisitQuestion, next: { value: unknown; wasAcceptedAsIs: boolean }) => {
     const key = `${q.area_key}::${q.question_key}`;
@@ -74,7 +85,9 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
                 <PrefilledField
                   key={key}
                   question={q}
-                  hubValue={undefined /* wired in Task 33 */}
+                  hubValue={snapshot && q.data_point_slug
+                    ? lookupHubValue(snapshot, { deal_id: dealId, unit_category_id: unitCategoryId }, q.data_point_slug)
+                    : undefined}
                   value={answers[key]?.value ?? ''}
                   onChange={(c) => onChange(q, c)}
                 />
