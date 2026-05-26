@@ -27,12 +27,60 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
           </button>
         </div>
       )}
-      <input
-        id={id}
-        className="rounded border border-gray-300 px-2 py-1"
-        value={value == null ? '' : String(value)}
-        onChange={(e) => onChange({ value: e.target.value, wasAcceptedAsIs: false })}
-      />
+      {question.field_type === 'text' && (
+        <input
+          id={id}
+          className="rounded border border-gray-300 px-2 py-1"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => onChange({ value: e.target.value, wasAcceptedAsIs: false })}
+        />
+      )}
+      {question.field_type === 'number' && (
+        <input
+          id={id}
+          type="number"
+          className="rounded border border-gray-300 px-2 py-1"
+          value={value == null ? '' : String(value)}
+          onChange={(e) =>
+            onChange({ value: e.target.value === '' ? null : Number(e.target.value), wasAcceptedAsIs: false })
+          }
+        />
+      )}
+      {question.field_type === 'select' && (
+        <select
+          id={id}
+          className="rounded border border-gray-300 px-2 py-1"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => onChange({ value: e.target.value, wasAcceptedAsIs: false })}
+        >
+          <option value="" />
+          {(question.choices ?? []).map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+      )}
+      {question.field_type === 'boolean' && (
+        <div className="flex gap-2">
+          {/* Hidden input keeps label htmlFor target resolvable for a11y/tests */}
+          <input type="hidden" id={id} aria-label={question.label} />
+          <button
+            type="button"
+            aria-pressed={value === true}
+            className={`rounded px-3 py-1 ${value === true ? 'bg-black text-white' : 'border border-gray-300'}`}
+            onClick={() => onChange({ value: true, wasAcceptedAsIs: false })}
+          >
+            Yes
+          </button>
+          <button
+            type="button"
+            aria-pressed={value === false}
+            className={`rounded px-3 py-1 ${value === false ? 'bg-black text-white' : 'border border-gray-300'}`}
+            onClick={() => onChange({ value: false, wasAcceptedAsIs: false })}
+          >
+            No
+          </button>
+        </div>
+      )}
     </div>
   );
 }
