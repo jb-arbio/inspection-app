@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { localDb } from './db';
 import { enqueue } from './sync';
+import { track } from './analytics';
 
 export async function sha256(blob: Blob): Promise<string> {
   const buf = await blob.arrayBuffer();
@@ -27,6 +28,7 @@ export function useMediaCapture(inspectionId: string) {
         size_bytes: blob.size,
         captured_at: new Date().toISOString(),
       });
+      track('media_captured', { kind, inspection_id: inspectionId });
       await enqueue('media_upload', {
         media_id: id, inspection_id: inspectionId, kind, content_hash, size_bytes: blob.size,
       });

@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { localDb } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
+import { track } from '@/lib/firstVisit/analytics';
 
 type Unit = { id: string; name?: string };
 type Snap = { deal: { id: string; name?: string }; locations: Unit[]; units: Unit[] };
@@ -12,6 +13,8 @@ export default function UnitPicker({ dealId, snapshot }: { dealId: string; snaps
 
   const start = async (unit: Unit) => {
     const id = crypto.randomUUID();
+    track('first_visit_started', { inspection_id: id, deal_id: dealId });
+    track('unit_selected', { unit_id: unit.id });
     const inspection = {
       id,
       deal_id: dealId,

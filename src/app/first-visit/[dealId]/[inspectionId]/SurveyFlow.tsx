@@ -10,6 +10,7 @@ import { createHandlers } from '@/lib/firstVisit/handlers';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
+import { track } from '@/lib/firstVisit/analytics';
 
 export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; inspectionId: string }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
@@ -54,12 +55,14 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
       updated_at: now,
     };
     await localDb.answers.put(row);
+    track('answer_saved', { question_key: q.question_key, inspection_id: inspectionId });
     setAnswers((a) => ({ ...a, [key]: row }));
     await enqueue('answer_upsert', row);
   };
 
   const submit = async () => {
     if (!confirm('Submit this visit? You will not be able to edit it after.')) return;
+    track('submit_clicked', { inspection_id: inspectionId });
     await localDb.inspections.update(inspectionId, {
       status: 'submitted',
       submitted_at: new Date().toISOString(),

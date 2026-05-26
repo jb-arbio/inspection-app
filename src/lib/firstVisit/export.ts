@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { localDb } from './db';
+import { track } from './analytics';
 
 function csvCell(v: unknown): string {
   if (v == null) return '';
@@ -44,6 +45,7 @@ export async function exportInspection(inspectionId: string): Promise<Blob> {
 
 export async function downloadInspectionZip(inspectionId: string): Promise<void> {
   const blob = await exportInspection(inspectionId);
+  track('export_generated', { inspection_id: inspectionId });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
