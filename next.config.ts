@@ -17,4 +17,11 @@ const nextConfig: NextConfig = {
   },
 };
 
+// TODO(pwa): next-pwa@5.6.0 injects a webpack config which is incompatible with
+// Next 16's Turbopack-default build (worker error on `next build`). Service worker
+// install is deferred until next-pwa ships a Turbopack-compatible release (or we
+// swap to @serwist/next). Offline behavior already works via the IndexedDB outbox,
+// so this is not a blocker for the scaffolding milestone. Manifest is still linked
+// from src/app/layout.tsx so the app remains installable as a basic PWA.
+
 export default nextConfig;
