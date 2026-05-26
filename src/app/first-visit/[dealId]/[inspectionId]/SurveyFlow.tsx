@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { DEV_QUESTIONS, byArea, type FirstVisitQuestion } from '@/lib/firstVisit/questions';
 import { PrefilledField } from '@/components/firstVisit/PrefilledField';
+import { MediaButtons } from '@/components/firstVisit/MediaButtons';
 import { localDb, type LocalAnswer } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
@@ -82,15 +83,22 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
             {qs.map((q) => {
               const key = `${q.area_key}::${q.question_key}`;
               return (
-                <PrefilledField
-                  key={key}
-                  question={q}
-                  hubValue={snapshot && q.data_point_slug
-                    ? lookupHubValue(snapshot, { deal_id: dealId, unit_category_id: unitCategoryId }, q.data_point_slug)
-                    : undefined}
-                  value={answers[key]?.value ?? ''}
-                  onChange={(c) => onChange(q, c)}
-                />
+                <div key={key} className="flex flex-col gap-2">
+                  <PrefilledField
+                    question={q}
+                    hubValue={snapshot && q.data_point_slug
+                      ? lookupHubValue(snapshot, { deal_id: dealId, unit_category_id: unitCategoryId }, q.data_point_slug)
+                      : undefined}
+                    value={answers[key]?.value ?? ''}
+                    onChange={(c) => onChange(q, c)}
+                  />
+                  <MediaButtons
+                    inspectionId={inspectionId}
+                    areaKey={q.area_key}
+                    questionKey={q.question_key}
+                    answerId={answers[key]?.id}
+                  />
+                </div>
               );
             })}
           </div>
