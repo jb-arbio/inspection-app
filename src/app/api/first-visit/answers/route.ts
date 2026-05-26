@@ -1,0 +1,30 @@
+import { NextResponse } from 'next/server';
+import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
+
+export async function POST(req: Request) {
+  const supabase = getHubSupabase();
+  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+
+  const a = await req.json();
+  const row = {
+    id: a.id,
+    inspection_id: a.inspection_id,
+    question_key: a.question_key,
+    area_key: a.area_key,
+    value: a.value ?? null,
+    notes: a.notes ?? null,
+    data_point_slug: a.data_point_slug ?? null,
+    hub_suggestion_snapshot: a.hub_suggestion_snapshot ?? null,
+    was_prefilled: !!a.was_prefilled,
+    was_accepted_as_is: !!a.was_accepted_as_is,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase
+    .from('first_visit_answers')
+    .upsert(row, { onConflict: 'inspection_id,question_key,area_key' });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
