@@ -94,9 +94,9 @@ export default function SurveyFlow({
             <button
               onClick={syncNow}
               disabled={syncing}
-              className="rounded border border-gray-300 px-2 py-0.5"
+              className="rounded border border-gray-300 px-2 py-0.5 disabled:opacity-50"
             >
-              {syncing ? 'Syncing…' : 'Sync now'}
+              Sync now
             </button>
             <button onClick={() => downloadInspectionZip(inspectionId)} className="rounded border border-gray-300 px-2 py-0.5 text-xs">Export</button>
           </div>

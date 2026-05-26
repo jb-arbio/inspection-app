@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { drainOutbox, outboxCount, type JobHandlers } from './sync';
 
 export function useOnlineStatus(): boolean {
@@ -28,31 +28,44 @@ export function useSyncEngine(handlers: JobHandlers): {
   const [syncing, setSyncing] = useState(false);
   const online = useOnlineStatus();
 
+  // Keep the handlers and the in-flight flag in refs so the public
+  // `syncNow` identity is stable across renders. Without this, every
+  // setSyncing(true) rebuilds syncNow → effects that depend on syncNow
+  // refire → call syncNow again → infinite "syncing…" flicker.
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+  const inFlight = useRef(false);
+
   const refresh = useCallback(async () => {
     setPending(await outboxCount());
   }, []);
 
   const syncNow = useCallback(async () => {
-    if (syncing) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSyncing(true);
     try {
-      await drainOutbox(handlers);
+      await drainOutbox(handlersRef.current);
     } finally {
+      inFlight.current = false;
       setSyncing(false);
       await refresh();
     }
-  }, [handlers, syncing, refresh]);
+  }, [refresh]);
 
+  // Initial + periodic count refresh.
   useEffect(() => {
     refresh();
     const id = setInterval(refresh, 5_000);
     return () => clearInterval(id);
   }, [refresh]);
 
+  // Trigger a sync when we come online.
   useEffect(() => {
     if (online) syncNow().catch(() => {});
   }, [online, syncNow]);
 
+  // Periodic background drain + on-focus drain.
   useEffect(() => {
     const id = setInterval(() => {
       if (navigator.onLine) syncNow().catch(() => {});

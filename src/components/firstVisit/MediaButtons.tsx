@@ -30,7 +30,7 @@ export function MediaButtons({
         type="file"
         accept="image/*"
         capture="environment"
-        className="hidden"
+        className="sr-only"
         onChange={(e) => onPick('photo', e.target.files?.[0])}
       />
       <button
@@ -45,7 +45,7 @@ export function MediaButtons({
         type="file"
         accept="video/*"
         capture="environment"
-        className="hidden"
+        className="sr-only"
         onChange={(e) => onPick('video', e.target.files?.[0])}
       />
     </div>

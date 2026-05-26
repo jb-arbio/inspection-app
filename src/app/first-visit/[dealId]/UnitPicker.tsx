@@ -4,8 +4,27 @@ import { localDb } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import { track } from '@/lib/firstVisit/analytics';
 
-type Unit = { id: string; name?: string };
-type Snap = { deal: { id: string; name?: string }; locations: Unit[]; units: Unit[] };
+type Unit = {
+  id: string;
+  category_type?: string;
+  custom_name?: string;
+  source_room_name?: string;
+  count?: number;
+};
+type Snap = {
+  deal: { id: string; name?: string };
+  locations: { id: string; display_name?: string }[];
+  units: Unit[];
+};
+
+function unitLabel(u: Unit): string {
+  return (
+    u.custom_name?.trim() ||
+    u.source_room_name?.trim() ||
+    u.category_type ||
+    u.id
+  );
+}
 
 export default function UnitPicker({ dealId, snapshot }: { dealId: string; snapshot: Snap }) {
   const router = useRouter();
@@ -38,9 +57,12 @@ export default function UnitPicker({ dealId, snapshot }: { dealId: string; snaps
         <li key={u.id}>
           <button
             onClick={() => start(u)}
-            className="block w-full rounded border border-gray-200 p-3 text-left"
+            className="block w-full rounded border border-gray-200 p-3 text-left hover:bg-gray-50"
           >
-            {u.name ?? u.id}
+            <div className="text-sm font-medium">{unitLabel(u)}</div>
+            {u.count && u.count > 1 && (
+              <div className="text-xs text-gray-500">×{u.count}</div>
+            )}
           </button>
         </li>
       ))}
