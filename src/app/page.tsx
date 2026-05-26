@@ -19,7 +19,7 @@ export default function ModePicker() {
           className="rounded-lg border border-gray-200 bg-white p-6 text-center shadow-sm hover:bg-gray-50"
         >
           <div className="text-lg font-medium">First Visit Survey</div>
-          <div className="text-sm text-gray-500">Pre-takeover property visit</div>
+          <div className="text-sm text-gray-500">Property visit during onboarding</div>
         </Link>
       </div>
     </main>
