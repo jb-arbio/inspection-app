@@ -12,10 +12,20 @@ import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
 import { track } from '@/lib/firstVisit/analytics';
 
-export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; inspectionId: string }) {
+export default function SurveyFlow({
+  dealId,
+  inspectionId,
+  previewSnapshot,
+  previewUnitCategoryId,
+}: {
+  dealId: string;
+  inspectionId: string;
+  previewSnapshot?: HubSnapshot;
+  previewUnitCategoryId?: string;
+}) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
-  const [snapshot, setSnapshot] = useState<HubSnapshot | null>(null);
-  const [unitCategoryId, setUnitCategoryId] = useState<string | undefined>(undefined);
+  const [snapshot, setSnapshot] = useState<HubSnapshot | null>(previewSnapshot ?? null);
+  const [unitCategoryId, setUnitCategoryId] = useState<string | undefined>(previewUnitCategoryId);
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
 
@@ -30,12 +40,13 @@ export default function SurveyFlow({ dealId, inspectionId }: { dealId: string; i
   }, [inspectionId]);
 
   useEffect(() => {
+    if (previewSnapshot) return; // preview mode: skip network fetch
     fetch(`/api/first-visit/deals/${dealId}/snapshot`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setSnapshot)
       .catch(() => setSnapshot(null));
     localDb.inspections.get(inspectionId).then((i) => setUnitCategoryId(i?.unit_category_id));
-  }, [dealId, inspectionId]);
+  }, [dealId, inspectionId, previewSnapshot]);
 
   const onChange = async (q: FirstVisitQuestion, next: { value: unknown; wasAcceptedAsIs: boolean }) => {
     const key = `${q.area_key}::${q.question_key}`;
