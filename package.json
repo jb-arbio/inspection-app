@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.95.3",
     "dexie": "^4.4.2",
     "dotenv": "^17.3.1",
