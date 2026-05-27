@@ -8,11 +8,12 @@ export async function POST(req: Request) {
   const { supabase, email } = ctx;
 
   const body = await req.json();
+  // The inspection is scoped to the deal only; properties/units live in
+  // first_visit_targets. The legacy location_id/unit_category_id columns stay
+  // on the table but we no longer write them.
   const row = {
     id: body.id,
     deal_id: body.deal_id,
-    location_id: body.location_id ?? null,
-    unit_category_id: body.unit_category_id ?? null,
     status: body.status ?? 'draft',
     inspector_email: email,
     started_at: body.started_at ?? new Date().toISOString(),

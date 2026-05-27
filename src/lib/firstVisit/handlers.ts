@@ -16,6 +16,9 @@ export function createHandlers(): JobHandlers {
     inspection_upsert: async (p) => {
       await postJSON('/api/first-visit/inspections', p);
     },
+    target_upsert: async (p) => {
+      await postJSON('/api/first-visit/targets', p);
+    },
     answer_upsert: async (p) => {
       await postJSON('/api/first-visit/answers', p);
       const a = p as { id: string };

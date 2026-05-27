@@ -11,6 +11,10 @@ export async function POST(req: Request) {
   const row = {
     id: a.id,
     inspection_id: a.inspection_id,
+    target_id: a.target_id ?? null,
+    scope: a.scope ?? null,
+    location_id: a.location_id ?? null,
+    unit_category_id: a.unit_category_id ?? null,
     question_key: a.question_key,
     area_key: a.area_key,
     value: a.value ?? null,
@@ -23,7 +27,7 @@ export async function POST(req: Request) {
   };
   const { error } = await supabase
     .from('first_visit_answers')
-    .upsert(row, { onConflict: 'inspection_id,question_key,area_key' });
+    .upsert(row, { onConflict: 'target_id,question_key,area_key' });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
