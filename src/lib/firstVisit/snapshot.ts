@@ -1,5 +1,3 @@
-import { resolveScopeId, type DataPointLevel, type InspectionScopeContext } from './resolveScope';
-
 export type HubSnapshot = {
   deal: { id: string };
   locations: { id: string }[];
@@ -11,24 +9,29 @@ export type HubSnapshot = {
     value: unknown;
     submitted_at: string;
   }[];
-  points: { id: string; slug: string; level: DataPointLevel }[];
+  points: { id: string; slug: string }[];
 };
 
 // Source priority (highest first). Anything not listed is lower-priority.
 const PRIORITY = ['owner', 'prefill_hubspot', 'prefill_scraper', 'prefill_places'];
 
+// Look up the highest-priority non-staff value for a data point slug at a
+// given scope_id. The caller resolves the scope_id (deal/location/unit) so the
+// same slug can resolve differently per tree node.
 export function lookupHubValue(
   snapshot: HubSnapshot,
-  ctx: InspectionScopeContext,
+  scopeId: string | undefined,
   data_point_slug: string,
 ): unknown {
+  if (!scopeId) return undefined;
   const dp = snapshot.points.find((p) => p.slug === data_point_slug);
   if (!dp) return undefined;
-  const scope_id = resolveScopeId(dp.level, ctx);
-  if (!scope_id) return undefined;
 
   const candidates = snapshot.values.filter(
-    (v) => v.data_point_id === dp.id && v.scope_id === scope_id && v.source !== 'staff_first_visit',
+    (v) =>
+      v.data_point_id === dp.id &&
+      v.scope_id === scopeId &&
+      v.source !== 'staff_first_visit',
   );
   if (candidates.length === 0) return undefined;
 

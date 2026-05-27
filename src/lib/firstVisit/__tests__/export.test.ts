@@ -13,7 +13,8 @@ describe('exportInspection', () => {
       inspector_email: 'a@arbio.com', started_at: '2026-05-22T00:00:00Z',
     });
     await localDb.answers.put({
-      id: 'a', inspection_id: 'i', question_key: 'q', area_key: 'r',
+      id: 'a', inspection_id: 'i', target_id: 'i', scope: 'deal',
+      question_key: 'q', area_key: 'r',
       value: 'v', was_prefilled: false, was_accepted_as_is: false,
       created_at: '', updated_at: '',
     });

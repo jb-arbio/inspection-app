@@ -1,10 +1,9 @@
 import Dexie, { type Table } from 'dexie';
+import type { HubScope } from './resolveScope';
 
 export type LocalInspection = {
   id: string;
   deal_id: string;
-  location_id?: string;
-  unit_category_id?: string;
   status: 'draft' | 'submitted' | 'discarded';
   inspector_email: string;
   started_at: string;
@@ -12,9 +11,29 @@ export type LocalInspection = {
   synced_at?: string;
 };
 
+// A node in the visit tree: a property (location) or a unit (unit_category).
+// Units are children of properties (parent_id points at the property target).
+export type LocalTarget = {
+  id: string;
+  inspection_id: string;
+  kind: 'property' | 'unit';
+  parent_id?: string; // property target id, for units
+  location_id?: string; // hub location id (property)
+  unit_category_id?: string; // hub unit_category id (unit)
+  label: string;
+  created_on_site: boolean; // true if staff added it (not from hub)
+  order: number;
+};
+
 export type LocalAnswer = {
   id: string;
   inspection_id: string;
+  // Which tree node this answer belongs to. Deal-scoped answers use the
+  // sentinel target_id === inspection_id (the visit root).
+  target_id: string;
+  scope: HubScope;
+  location_id?: string;
+  unit_category_id?: string;
   question_key: string;
   area_key: string;
   value: unknown;
@@ -31,6 +50,7 @@ export type LocalAnswer = {
 export type LocalMedia = {
   id: string;
   inspection_id: string;
+  target_id: string;
   answer_id?: string;
   area_key: string;
   question_key?: string;
@@ -45,7 +65,14 @@ export type LocalMedia = {
 
 export type OutboxJob = {
   id?: number;
-  kind: 'inspection_upsert' | 'answer_upsert' | 'media_upload' | 'media_metadata' | 'submit' | 'discard';
+  kind:
+    | 'inspection_upsert'
+    | 'target_upsert'
+    | 'answer_upsert'
+    | 'media_upload'
+    | 'media_metadata'
+    | 'submit'
+    | 'discard';
   payload: unknown;
   created_at: number;
   attempts: number;
@@ -55,6 +82,7 @@ export type OutboxJob = {
 
 class FirstVisitDexie extends Dexie {
   inspections!: Table<LocalInspection, string>;
+  targets!: Table<LocalTarget, string>;
   answers!: Table<LocalAnswer, string>;
   media!: Table<LocalMedia, string>;
   outbox!: Table<OutboxJob, number>;
@@ -65,6 +93,15 @@ class FirstVisitDexie extends Dexie {
       inspections: 'id, deal_id, status, synced_at',
       answers: 'id, inspection_id, [inspection_id+question_key+area_key], synced_at',
       media: 'id, inspection_id, answer_id, verified_at',
+      outbox: '++id, kind, created_at',
+    });
+    // v2 — visit tree: targets table + answers/media scoped by target_id.
+    this.version(2).stores({
+      inspections: 'id, deal_id, status, synced_at',
+      targets: 'id, inspection_id, parent_id, kind',
+      answers:
+        'id, inspection_id, target_id, [target_id+question_key+area_key], synced_at',
+      media: 'id, inspection_id, target_id, answer_id, verified_at',
       outbox: '++id, kind, created_at',
     });
   }

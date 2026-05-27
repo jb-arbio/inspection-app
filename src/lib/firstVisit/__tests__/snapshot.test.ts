@@ -11,23 +11,21 @@ const snapshot = {
     { data_point_id: 'dp2', scope_id: 'u', source: 'staff_first_visit', value: 'Z', submitted_at: '2026-01-03' },
   ],
   points: [
-    { id: 'dp1', slug: 'wifi', level: 'deal' },
-    { id: 'dp2', slug: 'beds', level: 'unit' },
+    { id: 'dp1', slug: 'wifi' },
+    { id: 'dp2', slug: 'beds' },
   ],
 };
 
-const ctx = { deal_id: 'd', location_id: 'l', unit_category_id: 'u' };
-
 describe('lookupHubValue', () => {
-  it('returns highest-priority non-self value at the right scope', () => {
-    expect(lookupHubValue(snapshot as never, ctx, 'wifi')).toBe('X');
+  it('returns highest-priority non-self value at the matching scope', () => {
+    expect(lookupHubValue(snapshot as never, 'd', 'wifi')).toBe('X');
   });
 
   it('excludes staff_first_visit so pre-fill never shows our own prior write', () => {
-    expect(lookupHubValue(snapshot as never, ctx, 'beds')).toBeUndefined();
+    expect(lookupHubValue(snapshot as never, 'u', 'beds')).toBeUndefined();
   });
 
   it('returns undefined when no data point matches', () => {
-    expect(lookupHubValue(snapshot as never, ctx, 'unknown')).toBeUndefined();
+    expect(lookupHubValue(snapshot as never, 'd', 'unknown')).toBeUndefined();
   });
 });

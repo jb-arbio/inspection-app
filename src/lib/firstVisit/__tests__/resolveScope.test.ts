@@ -4,16 +4,17 @@ import { resolveScopeId } from '../resolveScope';
 const ctx = { deal_id: 'd', location_id: 'l', unit_category_id: 'u' };
 
 describe('resolveScopeId', () => {
-  it('returns deal_id for deal level', () => {
+  it('maps deal scope to deal_id', () => {
     expect(resolveScopeId('deal', ctx)).toBe('d');
   });
-  it('returns unit_category_id for unit/property/listing levels', () => {
-    expect(resolveScopeId('unit', ctx)).toBe('u');
-    expect(resolveScopeId('property', ctx)).toBe('u');
-    expect(resolveScopeId('listing', ctx)).toBe('u');
+  it('maps location scope to location_id', () => {
+    expect(resolveScopeId('location', ctx)).toBe('l');
   });
-  it('returns null for unsupported level', () => {
-    expect(resolveScopeId('owner', ctx)).toBeNull();
-    expect(resolveScopeId('reservation', ctx)).toBeNull();
+  it('maps unit_category scope to unit_category_id', () => {
+    expect(resolveScopeId('unit_category', ctx)).toBe('u');
+  });
+  it('returns null when the scope id is absent', () => {
+    expect(resolveScopeId('location', { deal_id: 'd' })).toBeNull();
+    expect(resolveScopeId('unit_category', { deal_id: 'd' })).toBeNull();
   });
 });

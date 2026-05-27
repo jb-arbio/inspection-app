@@ -11,12 +11,12 @@ describe('POST /api/first-visit/submit', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('writes data_point_values for mapped answers and logs activity', async () => {
-    const inspectionRow = { id: 'i1', deal_id: 'd1', unit_category_id: 'u1' };
+    const inspectionRow = { id: 'i1', deal_id: 'd1' };
     const answerRows = [
-      { question_key: 'beds', value: 2, data_point_slug: 'beds-count' },
-      { question_key: 'wifi', value: 'pw', data_point_slug: null },
+      { question_key: 'beds', value: 2, data_point_slug: 'beds-count', scope: 'unit_category', unit_category_id: 'u1' },
+      { question_key: 'wifi', value: 'pw', data_point_slug: null, scope: 'deal' },
     ];
-    const dpRow = { id: 'dp1', slug: 'beds-count', level: 'unit' };
+    const dpRow = { id: 'dp1', slug: 'beds-count' };
 
     const from = vi.fn((table: string) => {
       if (table === 'first_visit_inspections') {
