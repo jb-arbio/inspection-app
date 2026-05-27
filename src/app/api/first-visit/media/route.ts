@@ -31,6 +31,7 @@ export async function POST(req: Request) {
   const { error } = await supabase.from('first_visit_media').insert({
     id: m.id,
     inspection_id: m.inspection_id,
+    target_id: m.target_id ?? null,
     answer_id: m.answer_id ?? null,
     area_key: m.area_key,
     question_key: m.question_key ?? null,

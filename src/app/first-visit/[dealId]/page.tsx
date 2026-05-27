@@ -1,4 +1,4 @@
-import UnitPicker from './UnitPicker';
+import StartVisit from './StartVisit';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,10 @@ export default async function DealPage({ params }: { params: Promise<{ dealId: s
   return (
     <main className="mx-auto max-w-md p-6">
       <h1 className="text-xl font-semibold">{snap.deal?.name ?? dealId}</h1>
-      <UnitPicker dealId={dealId} snapshot={snap} />
+      <p className="mt-1 text-sm text-gray-500">
+        Start a visit, then add the properties and units you inspect on-site.
+      </p>
+      <StartVisit dealId={dealId} />
     </main>
   );
 }

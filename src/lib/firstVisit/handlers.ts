@@ -43,6 +43,7 @@ export function createHandlers(): JobHandlers {
       await postJSON('/api/first-visit/media', {
         id: media_id,
         inspection_id,
+        target_id: local.target_id,
         answer_id: local.answer_id,
         area_key: local.area_key,
         question_key: local.question_key,

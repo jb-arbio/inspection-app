@@ -31,7 +31,7 @@ export async function GET(
     .select('data_point_id, scope_id, source, value, submitted_at')
     .in('scope_id', scopeIds);
   const { data: points } = await supabase
-    .from('data_points').select('id, slug, level');
+    .from('data_points').select('id, slug');
 
   return NextResponse.json({ deal, locations, units, values, points });
 }

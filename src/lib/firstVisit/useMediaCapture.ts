@@ -13,12 +13,13 @@ export async function sha256(blob: Blob): Promise<string> {
 
 export function useMediaCapture(inspectionId: string) {
   const persist = useCallback(
-    async (blob: Blob, kind: 'photo'|'video'|'audio', meta: { area_key: string; question_key?: string; answer_id?: string }) => {
+    async (blob: Blob, kind: 'photo'|'video'|'audio', meta: { target_id: string; area_key: string; question_key?: string; answer_id?: string }) => {
       const id = crypto.randomUUID();
       const content_hash = await sha256(blob);
       await localDb.media.put({
         id,
         inspection_id: inspectionId,
+        target_id: meta.target_id,
         answer_id: meta.answer_id,
         area_key: meta.area_key,
         question_key: meta.question_key,

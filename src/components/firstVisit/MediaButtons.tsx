@@ -7,12 +7,14 @@ type MediaKind = 'photo' | 'video';
 
 export function MediaButtons({
   inspectionId,
+  targetId,
   areaKey,
   questionKey,
   answerId,
   evidence,
 }: {
   inspectionId: string;
+  targetId: string;
   areaKey: string;
   questionKey?: string;
   answerId?: string;
@@ -22,7 +24,7 @@ export function MediaButtons({
 
   const onPick = async (kind: MediaKind, file: File | undefined) => {
     if (!file) return;
-    await persist(file, kind, { area_key: areaKey, question_key: questionKey, answer_id: answerId });
+    await persist(file, kind, { target_id: targetId, area_key: areaKey, question_key: questionKey, answer_id: answerId });
   };
 
   const kinds: MediaKind[] = [];
