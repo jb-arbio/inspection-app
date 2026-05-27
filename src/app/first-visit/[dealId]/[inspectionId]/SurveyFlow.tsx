@@ -124,6 +124,7 @@ export default function SurveyFlow({
                     areaKey={q.area_key}
                     questionKey={q.question_key}
                     answerId={answers[key]?.id}
+                    evidence={q.evidence}
                   />
                 </div>
               );

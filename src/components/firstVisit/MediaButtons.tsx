@@ -1,72 +1,100 @@
 'use client';
 import { useRef } from 'react';
 import { useMediaCapture } from '@/lib/firstVisit/useMediaCapture';
+import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
+
+type MediaKind = 'photo' | 'video';
 
 export function MediaButtons({
-  inspectionId, areaKey, questionKey, answerId,
+  inspectionId,
+  areaKey,
+  questionKey,
+  answerId,
+  evidence,
 }: {
-  inspectionId: string; areaKey: string; questionKey?: string; answerId?: string;
+  inspectionId: string;
+  areaKey: string;
+  questionKey?: string;
+  answerId?: string;
+  evidence?: FirstVisitQuestion['evidence'];
 }) {
   const { persist } = useMediaCapture(inspectionId);
-  const photoCaptureRef = useRef<HTMLInputElement>(null);
-  const photoUploadRef = useRef<HTMLInputElement>(null);
-  const videoCaptureRef = useRef<HTMLInputElement>(null);
-  const videoUploadRef = useRef<HTMLInputElement>(null);
 
-  const onPick = async (kind: 'photo'|'video', file: File | undefined) => {
+  const onPick = async (kind: MediaKind, file: File | undefined) => {
     if (!file) return;
     await persist(file, kind, { area_key: areaKey, question_key: questionKey, answer_id: answerId });
   };
 
-  const btn =
-    'rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50';
+  const kinds: MediaKind[] = [];
+  if (evidence?.photo) kinds.push('photo');
+  if (evidence?.video) kinds.push('video');
+  if (kinds.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {/* Photo */}
-      <button type="button" onClick={() => photoCaptureRef.current?.click()} className={btn}>
-        📷 Capture photo
-      </button>
-      <input
-        ref={photoCaptureRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={(e) => onPick('photo', e.target.files?.[0])}
-      />
-      <button type="button" onClick={() => photoUploadRef.current?.click()} className={btn}>
-        📁 Upload photo
-      </button>
-      <input
-        ref={photoUploadRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={(e) => onPick('photo', e.target.files?.[0])}
-      />
+    <div className="flex flex-col gap-1.5">
+      {kinds.map((kind) => (
+        <MediaRow
+          key={kind}
+          kind={kind}
+          required={evidence?.[kind] === 'required'}
+          onPick={(f) => onPick(kind, f)}
+        />
+      ))}
+    </div>
+  );
+}
 
-      {/* Video */}
-      <button type="button" onClick={() => videoCaptureRef.current?.click()} className={btn}>
-        🎥 Capture video
+function MediaRow({
+  kind,
+  required,
+  onPick,
+}: {
+  kind: MediaKind;
+  required: boolean;
+  onPick: (file: File | undefined) => void;
+}) {
+  const captureRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
+
+  const accept = kind === 'photo' ? 'image/*' : 'video/*';
+  const captureLabel = kind === 'photo' ? '📷 Take photo' : '🎥 Record video';
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => captureRef.current?.click()}
+        className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+      >
+        {captureLabel}
       </button>
+      {required && <span className="text-[10px] uppercase text-red-500">required</span>}
+
+      {/* small, secondary upload affordance */}
+      <button
+        type="button"
+        onClick={() => uploadRef.current?.click()}
+        title={`Upload ${kind} from device`}
+        aria-label={`Upload ${kind} from device`}
+        className="ml-auto rounded p-1 text-gray-400 hover:text-gray-700"
+      >
+        ⤓
+      </button>
+
       <input
-        ref={videoCaptureRef}
+        ref={captureRef}
         type="file"
-        accept="video/*"
+        accept={accept}
         capture="environment"
         className="sr-only"
-        onChange={(e) => onPick('video', e.target.files?.[0])}
+        onChange={(e) => onPick(e.target.files?.[0])}
       />
-      <button type="button" onClick={() => videoUploadRef.current?.click()} className={btn}>
-        📁 Upload video
-      </button>
       <input
-        ref={videoUploadRef}
+        ref={uploadRef}
         type="file"
-        accept="video/*"
+        accept={accept}
         className="sr-only"
-        onChange={(e) => onPick('video', e.target.files?.[0])}
+        onChange={(e) => onPick(e.target.files?.[0])}
       />
     </div>
   );
