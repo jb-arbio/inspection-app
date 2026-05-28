@@ -686,12 +686,6 @@ function AddUnitControl({
   onAddOnSite: (label: string) => void;
 }) {
   const [label, setLabel] = useState('');
-  const [selectedHubUnit, setSelectedHubUnit] = useState<HubUnit | null>(null);
-
-  const reset = () => {
-    setLabel('');
-    setSelectedHubUnit(null);
-  };
 
   if (!open) {
     return (
@@ -704,87 +698,94 @@ function AddUnitControl({
     );
   }
 
-  const pickHubUnit = (u: HubUnit) => {
-    setSelectedHubUnit(u);
-    if (!label.trim()) setLabel(unitLabel(u));
+  const close = () => {
+    setLabel('');
+    onCancel();
   };
 
-  const submit = () => {
+  const pickHubUnit = (u: HubUnit) => {
+    // Add directly using the hub's name — no prefill-and-edit step. The
+    // inspector can rename later with the ✎ on the unit row if needed.
+    onAddFromHub(u, unitLabel(u));
+    setLabel('');
+  };
+
+  const addOnSite = () => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    if (selectedHubUnit) onAddFromHub(selectedHubUnit, trimmed);
-    else onAddOnSite(trimmed);
-    reset();
+    onAddOnSite(trimmed);
+    setLabel('');
   };
 
   return (
-    <div className="mt-2 rounded border border-gray-200 p-2">
-      {unusedUnits.length > 0 && (
-        <div className="mb-2">
-          <div className="text-xs text-gray-500">Hub units (tap to attach)</div>
-          <div className="mt-1 flex flex-wrap gap-1">
+    <div className="mt-2 flex flex-col gap-3 rounded-md border border-gray-200 p-3">
+      {unusedUnits.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            From the hub
+          </div>
+          <ul className="flex flex-col divide-y divide-gray-100 overflow-hidden rounded border border-gray-200">
             {unusedUnits.map((u) => {
-              const isSelected = selectedHubUnit?.id === u.id;
               const meta = unitMeta?.(u);
               return (
-                <button
-                  key={u.id}
-                  onClick={() => pickHubUnit(u)}
-                  className={`rounded border px-2 py-1 text-left text-xs ${
-                    isSelected
-                      ? 'border-black bg-black text-white'
-                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="leading-tight">{unitLabel(u)}</div>
-                  {meta ? (
-                    <div
-                      className={`text-[10px] leading-tight ${
-                        isSelected ? 'text-gray-300' : 'text-gray-500'
-                      }`}
-                    >
-                      {meta}
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onClick={() => pickHubUnit(u)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50"
+                  >
+                    <div className="flex-1">
+                      <div className="text-sm font-medium leading-tight">
+                        {unitLabel(u)}
+                      </div>
+                      {meta && (
+                        <div className="mt-0.5 text-[11px] leading-tight text-gray-500">
+                          {meta}
+                        </div>
+                      )}
                     </div>
-                  ) : null}
-                </button>
+                    <span aria-hidden className="text-gray-400">+</span>
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
+      ) : (
+        <p className="text-xs text-gray-500">
+          No hub units for this property yet — add one on-site below.
+        </p>
       )}
-      <label className="text-xs text-gray-500">
-        Unit name / room number{' '}
-        <span className="text-gray-400">(always required)</span>
-      </label>
-      <div className="mt-1 flex gap-2">
-        <input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. Apt 2A, Bedroom left"
-          className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
-        />
-        <button
-          onClick={submit}
-          disabled={!label.trim()}
-          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-        >
-          Add
-        </button>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          Or add a unit not in the hub
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') addOnSite();
+            }}
+            placeholder="Unit name / room number"
+            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={addOnSite}
+            disabled={!label.trim()}
+            className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
       </div>
-      {selectedHubUnit && (
-        <button
-          onClick={() => setSelectedHubUnit(null)}
-          className="mt-1 text-[11px] text-gray-400 hover:text-gray-700"
-        >
-          Clear hub link (add as on-site only)
-        </button>
-      )}
+
       <button
-        onClick={() => {
-          onCancel();
-          reset();
-        }}
-        className="mt-1 ml-2 text-[11px] text-gray-400 hover:text-gray-700"
+        type="button"
+        onClick={close}
+        className="self-end text-xs text-gray-400 hover:text-gray-700"
       >
         Cancel
       </button>
