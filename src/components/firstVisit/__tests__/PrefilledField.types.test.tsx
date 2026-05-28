@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PrefilledField } from '../PrefilledField';
+import { makeQuestion } from './_fixtures';
 
 describe('PrefilledField — field types', () => {
   it('number renders a numeric input', () => {
     render(
       <PrefilledField
-        question={{ question_key: 'q', area_key: 'a', label: 'Count', field_type: 'number', order: 1 }}
+        question={makeQuestion({ label: 'Count', type: 'number' })}
         hubValue={undefined}
         value={3}
         onChange={() => {}}
@@ -17,17 +18,10 @@ describe('PrefilledField — field types', () => {
     expect(input.value).toBe('3');
   });
 
-  it('select renders option list', async () => {
+  it('select renders option list', () => {
     render(
       <PrefilledField
-        question={{
-          question_key: 'q',
-          area_key: 'a',
-          label: 'Type',
-          field_type: 'select',
-          choices: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
-          order: 1,
-        }}
+        question={makeQuestion({ label: 'Type', type: 'select', options: ['A', 'B'] })}
         hubValue={undefined}
         value=""
         onChange={() => {}}
@@ -41,7 +35,7 @@ describe('PrefilledField — field types', () => {
   it('boolean renders yes/no toggle', () => {
     render(
       <PrefilledField
-        question={{ question_key: 'q', area_key: 'a', label: 'Working', field_type: 'boolean', order: 1 }}
+        question={makeQuestion({ label: 'Working', type: 'boolean' })}
         hubValue={undefined}
         value={false}
         onChange={() => {}}
@@ -50,4 +44,18 @@ describe('PrefilledField — field types', () => {
     expect(screen.getByRole('button', { name: /Yes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /No/i })).toBeInTheDocument();
   });
+
+  it('date renders a date input', () => {
+    render(
+      <PrefilledField
+        question={makeQuestion({ label: 'Visit date', type: 'date' })}
+        hubValue={undefined}
+        value=""
+        onChange={() => {}}
+      />,
+    );
+    const input = screen.getByLabelText('Visit date') as HTMLInputElement;
+    expect(input.type).toBe('date');
+  });
+
 });

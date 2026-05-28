@@ -2,18 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PrefilledField } from '../PrefilledField';
+import { makeQuestion } from './_fixtures';
 
 describe('PrefilledField — accept', () => {
+  const wifi = makeQuestion({ slug: 'wifi', label: 'WiFi', type: 'text' });
+
   it('renders hub value as a "Pre-filled" badge with Accept', () => {
     render(
       <PrefilledField
-        question={{
-          question_key: 'wifi',
-          area_key: 'a',
-          label: 'WiFi',
-          field_type: 'text',
-          order: 1,
-        }}
+        question={wifi}
         hubValue="HelloRouter"
         value=""
         onChange={() => {}}
@@ -28,13 +25,7 @@ describe('PrefilledField — accept', () => {
     const onChange = vi.fn();
     render(
       <PrefilledField
-        question={{
-          question_key: 'wifi',
-          area_key: 'a',
-          label: 'WiFi',
-          field_type: 'text',
-          order: 1,
-        }}
+        question={wifi}
         hubValue="HelloRouter"
         value=""
         onChange={onChange}
@@ -51,13 +42,7 @@ describe('PrefilledField — accept', () => {
     const onChange = vi.fn();
     render(
       <PrefilledField
-        question={{
-          question_key: 'wifi',
-          area_key: 'a',
-          label: 'WiFi',
-          field_type: 'text',
-          order: 1,
-        }}
+        question={wifi}
         hubValue="HelloRouter"
         value=""
         onChange={onChange}

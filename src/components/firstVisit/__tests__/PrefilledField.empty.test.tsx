@@ -2,19 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PrefilledField } from '../PrefilledField';
+import { makeQuestion } from './_fixtures';
 
 describe('PrefilledField — empty', () => {
   it('renders empty input when no hub value', async () => {
     const onChange = vi.fn();
     render(
       <PrefilledField
-        question={{
-          question_key: 'wifi',
-          area_key: 'a',
-          label: 'WiFi',
-          field_type: 'text',
-          order: 1,
-        }}
+        question={makeQuestion({ slug: 'wifi', label: 'WiFi', type: 'text' })}
         hubValue={undefined}
         value=""
         onChange={onChange}

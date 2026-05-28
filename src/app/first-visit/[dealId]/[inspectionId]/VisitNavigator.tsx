@@ -1,15 +1,20 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { localDb, type LocalTarget } from '@/lib/firstVisit/db';
+import { localDb, type LocalAnswer, type LocalTarget } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
 import { type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
+import { ProgressRing } from '@/components/firstVisit/ProgressRing';
 import { track } from '@/lib/firstVisit/analytics';
 import { UnitSurvey, type SurveyTarget } from './UnitSurvey';
 import type { HubScope } from '@/lib/firstVisit/resolveScope';
+import {
+  computeProgressFromAnswers,
+  type ScopeProgress,
+} from '@/lib/firstVisit/progress';
 
 // Raw hub rows carry extra display fields beyond the lean HubSnapshot type.
 type HubLocation = { id: string; display_name?: string };
@@ -19,6 +24,14 @@ type HubUnit = {
   category_type?: string;
   custom_name?: string;
   source_room_name?: string;
+  // Optional metadata that may or may not be present on the row; rendered
+  // under the chip label when available.
+  floor?: string | number | null;
+  beds?: string | number | null;
+  bedrooms?: string | number | null;
+  bathrooms?: string | number | null;
+  max_guests?: string | number | null;
+  size_sqm?: string | number | null;
 };
 type RawSnapshot = Omit<HubSnapshot, 'deal' | 'locations' | 'units'> & {
   deal: { id: string; name?: string };
@@ -28,6 +41,41 @@ type RawSnapshot = Omit<HubSnapshot, 'deal' | 'locations' | 'units'> & {
 
 function unitLabel(u: HubUnit): string {
   return u.custom_name?.trim() || u.source_room_name?.trim() || u.category_type || 'Unit';
+}
+
+// Build a compact secondary metadata line for a hub unit chip. Skips fields
+// the hub didn't fill in, and falls back to undefined if there's nothing to
+// show so the caller can avoid rendering an empty line.
+function unitMetaLine(u: HubUnit): string | undefined {
+  const parts: string[] = [];
+  if (u.category_type && u.category_type !== 'default') {
+    parts.push(String(u.category_type));
+  }
+  if (u.floor !== undefined && u.floor !== null && String(u.floor).trim() !== '') {
+    parts.push(`floor ${u.floor}`);
+  }
+  const beds = u.bedrooms ?? u.beds;
+  if (beds !== undefined && beds !== null && String(beds).trim() !== '') {
+    parts.push(`${beds} bed${String(beds) === '1' ? '' : 's'}`);
+  }
+  if (
+    u.bathrooms !== undefined &&
+    u.bathrooms !== null &&
+    String(u.bathrooms).trim() !== ''
+  ) {
+    parts.push(`${u.bathrooms} bath${String(u.bathrooms) === '1' ? '' : 's'}`);
+  }
+  if (
+    u.max_guests !== undefined &&
+    u.max_guests !== null &&
+    String(u.max_guests).trim() !== ''
+  ) {
+    parts.push(`sleeps ${u.max_guests}`);
+  }
+  if (u.size_sqm !== undefined && u.size_sqm !== null && String(u.size_sqm).trim() !== '') {
+    parts.push(`${u.size_sqm} m²`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 type Selection =
@@ -47,11 +95,13 @@ export default function VisitNavigator({
   visitTitle?: string;
 }) {
   const [targets, setTargets] = useState<LocalTarget[]>([]);
+  const [answers, setAnswers] = useState<LocalAnswer[]>([]);
   const [snapshot, setSnapshot] = useState<RawSnapshot | null>(
     (previewSnapshot as RawSnapshot) ?? null,
   );
   const [selected, setSelected] = useState<Selection | null>(null);
   const [adding, setAdding] = useState<null | { kind: 'property' } | { kind: 'unit'; property: LocalTarget }>(null);
+  const [renamingUnitId, setRenamingUnitId] = useState<string | null>(null);
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
 
@@ -64,10 +114,20 @@ export default function VisitNavigator({
     setTargets(rows);
   }, [inspectionId]);
 
+  const reloadAnswers = useCallback(async () => {
+    const rows = await localDb.answers
+      .where('inspection_id')
+      .equals(inspectionId)
+      .toArray();
+    setAnswers(rows);
+  }, [inspectionId]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount; matches existing first-visit effects
     void reloadTargets();
-  }, [reloadTargets]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
+    void reloadAnswers();
+  }, [reloadTargets, reloadAnswers]);
 
   useEffect(() => {
     if (previewSnapshot) return;
@@ -81,6 +141,66 @@ export default function VisitNavigator({
   const unitsOf = (propId: string) =>
     targets.filter((t) => t.kind === 'unit' && t.parent_id === propId);
 
+  const progressFor = (targetId: string, scope: HubScope): ScopeProgress => {
+    const own = answers.filter((a) => a.target_id === targetId);
+    return computeProgressFromAnswers(scope, own);
+  };
+
+  // Count required questions still unanswered across every scope in this
+  // visit: deal-scoped (target_id === inspectionId), each property, each unit.
+  const totalUnansweredRequired = (): number => {
+    let total = 0;
+    const dealProgress = progressFor(inspectionId, 'deal');
+    total += dealProgress.total - dealProgress.done;
+    for (const p of properties) {
+      const lp = progressFor(p.id, 'location');
+      total += lp.total - lp.done;
+      for (const u of unitsOf(p.id)) {
+        const up = progressFor(u.id, 'unit_category');
+        total += up.total - up.done;
+      }
+    }
+    return total;
+  };
+
+  const deleteProperty = async (p: LocalTarget) => {
+    if (!confirm(`Delete ${p.label || 'this property'} and all its units?`)) return;
+    const children = unitsOf(p.id);
+    const childIds = children.map((c) => c.id);
+    const allIds = [p.id, ...childIds];
+
+    // Delete answers attached to the property and all its child units.
+    for (const id of allIds) {
+      const rows = await localDb.answers.where('target_id').equals(id).toArray();
+      if (rows.length > 0) {
+        await localDb.answers.bulkDelete(rows.map((r) => r.id));
+      }
+    }
+    // Delete the LocalTargets (property + all units).
+    await localDb.targets.bulkDelete(allIds);
+    // TODO: hub-side cascade delete (locations + unit_categories) once API exists.
+    for (const id of allIds) {
+      await enqueue('target_delete', { id, inspection_id: inspectionId });
+    }
+    track('property_deleted', { had_units: childIds.length });
+    await reloadTargets();
+    await reloadAnswers();
+  };
+
+  const deleteUnit = async (u: LocalTarget) => {
+    if (!confirm(`Delete ${u.label || 'this unit'}?`)) return;
+    const rows = await localDb.answers.where('target_id').equals(u.id).toArray();
+    if (rows.length > 0) {
+      await localDb.answers.bulkDelete(rows.map((r) => r.id));
+    }
+    await localDb.targets.delete(u.id);
+    // TODO: hub-side delete of unit_categories row once API exists.
+    await enqueue('target_delete', { id: u.id, inspection_id: inspectionId });
+    track('unit_deleted', {});
+    await reloadTargets();
+    await reloadAnswers();
+  };
+
   // Hub locations / units not yet added to the visit tree.
   const usedLocationIds = new Set(properties.map((p) => p.location_id).filter(Boolean));
   const unusedLocations = (snapshot?.locations ?? []).filter((l) => !usedLocationIds.has(l.id));
@@ -89,6 +209,17 @@ export default function VisitNavigator({
     await localDb.targets.put(t);
     await enqueue('target_upsert', t);
     await reloadTargets();
+  };
+
+  const renameUnit = async (u: LocalTarget, nextLabel: string) => {
+    const trimmed = nextLabel.trim();
+    if (!trimmed || trimmed === u.label) {
+      setRenamingUnitId(null);
+      return;
+    }
+    track('unit_renamed', { from: u.label, to: trimmed });
+    await persistTarget({ ...u, label: trimmed });
+    setRenamingUnitId(null);
   };
 
   const addPropertyFromHub = async (loc: HubLocation) => {
@@ -131,7 +262,7 @@ export default function VisitNavigator({
     setAdding(null);
   };
 
-  const addUnitFromHub = async (property: LocalTarget, unit: HubUnit) => {
+  const addUnitFromHub = async (property: LocalTarget, unit: HubUnit, label: string) => {
     const siblings = unitsOf(property.id);
     const t: LocalTarget = {
       id: crypto.randomUUID(),
@@ -139,7 +270,7 @@ export default function VisitNavigator({
       kind: 'unit',
       parent_id: property.id,
       unit_category_id: unit.id,
-      label: unitLabel(unit),
+      label,
       created_on_site: false,
       order: siblings.length,
     };
@@ -183,8 +314,13 @@ export default function VisitNavigator({
   };
 
   const submit = async () => {
-    if (!confirm('Submit this visit? You will not be able to edit it after.')) return;
-    track('submit_clicked', { inspection_id: inspectionId });
+    const missing = totalUnansweredRequired();
+    const message =
+      missing > 0
+        ? `${missing} required question${missing === 1 ? '' : 's'} still unanswered. Submit anyway?`
+        : 'Submit this visit? You will not be able to edit it after.';
+    if (!confirm(message)) return;
+    track('submit_clicked', { inspection_id: inspectionId, missing_required: missing });
     await localDb.inspections.update(inspectionId, {
       status: 'submitted',
       submitted_at: new Date().toISOString(),
@@ -198,6 +334,7 @@ export default function VisitNavigator({
     let target: SurveyTarget;
     let scope: HubScope;
     let ctx;
+    let breadcrumb: string[] | undefined;
     if (selected.kind === 'deal') {
       target = { id: inspectionId, label: 'Visit details' };
       scope = 'deal';
@@ -206,6 +343,7 @@ export default function VisitNavigator({
       target = { id: selected.target.id, label: selected.target.label };
       scope = 'location';
       ctx = { deal_id: dealId, location_id: selected.target.location_id };
+      breadcrumb = [selected.target.label];
     } else {
       target = { id: selected.target.id, label: selected.target.label };
       scope = 'unit_category';
@@ -214,6 +352,7 @@ export default function VisitNavigator({
         location_id: selected.property.location_id,
         unit_category_id: selected.target.unit_category_id,
       };
+      breadcrumb = [selected.property.label, selected.target.label];
     }
     return (
       <UnitSurvey
@@ -222,7 +361,11 @@ export default function VisitNavigator({
         scope={scope}
         ctx={ctx}
         snapshot={snapshot}
-        onBack={() => setSelected(null)}
+        onBack={() => {
+          setSelected(null);
+          void reloadAnswers();
+        }}
+        breadcrumb={breadcrumb}
       />
     );
   }
@@ -255,53 +398,93 @@ export default function VisitNavigator({
       {/* Visit details (deal-scoped) */}
       <button
         onClick={() => setSelected({ kind: 'deal' })}
-        className="mt-3 block w-full rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
+        className="mt-3 flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
       >
-        <div className="text-sm font-medium">Visit details</div>
-        <div className="text-xs text-gray-500">Questions answered once for the whole visit</div>
+        <div className="flex-1">
+          <div className="text-sm font-medium">Visit details</div>
+          <div className="text-xs text-gray-500">Questions answered once for the whole visit</div>
+        </div>
+        {(() => {
+          const pr = progressFor(inspectionId, 'deal');
+          return pr.total > 0 ? <ProgressRing done={pr.done} total={pr.total} size={32} /> : null;
+        })()}
+        <span aria-hidden className="text-gray-400">›</span>
       </button>
 
       {/* Properties */}
       <section className="mt-5">
         <h2 className="text-sm font-medium uppercase tracking-wide text-gray-500">Properties</h2>
         <div className="mt-2 flex flex-col gap-3">
-          {properties.map((p) => (
-            <div key={p.id} className="rounded-lg border border-gray-200">
-              <button
-                onClick={() => setSelected({ kind: 'property', target: p })}
-                className="block w-full p-3 text-left hover:bg-gray-50"
-              >
-                <div className="text-sm font-medium">{p.label}</div>
-                <div className="text-xs text-gray-500">Property questions</div>
-              </button>
-              <div className="border-t border-gray-100 px-3 py-2">
-                <div className="flex flex-col gap-1.5">
-                  {unitsOf(p.id).map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => setSelected({ kind: 'unit', target: u, property: p })}
-                      className="block w-full rounded border border-gray-100 px-2 py-1.5 text-left text-sm hover:bg-gray-50"
-                    >
-                      {u.label}
-                    </button>
-                  ))}
+          {properties.map((p) => {
+            const propProgress = progressFor(p.id, 'location');
+            return (
+              <div key={p.id} className="rounded-lg border border-gray-200">
+                <div className="flex w-full items-center gap-1 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelected({ kind: 'property', target: p })}
+                    className="-m-1 flex flex-1 items-center gap-2 rounded-md p-1 text-left hover:bg-gray-50"
+                  >
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{p.label}</div>
+                      <div className="text-xs text-gray-500">Tap to open property questions</div>
+                    </div>
+                    {propProgress.total > 0 ? (
+                      <ProgressRing
+                        done={propProgress.done}
+                        total={propProgress.total}
+                        size={32}
+                      />
+                    ) : null}
+                    <span aria-hidden className="text-gray-400">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteProperty(p)}
+                    title="Delete property"
+                    aria-label={`Delete ${p.label}`}
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-red-600"
+                  >
+                    🗑
+                  </button>
                 </div>
-                <AddUnitControl
-                  open={adding?.kind === 'unit' && adding.property.id === p.id}
-                  onOpen={() => setAdding({ kind: 'unit', property: p })}
-                  onCancel={() => setAdding(null)}
-                  unusedUnits={(snapshot?.units ?? []).filter(
-                    (u) =>
-                      u.location_id === p.location_id &&
-                      !unitsOf(p.id).some((t) => t.unit_category_id === u.id),
-                  )}
-                  unitLabel={unitLabel}
-                  onPickHub={(u) => addUnitFromHub(p, u)}
-                  onCreate={(label) => addUnitOnSite(p, label)}
-                />
+                <div className="border-t border-gray-100 px-3 py-2">
+                  <div className="flex flex-col gap-1.5">
+                    {unitsOf(p.id).map((u) => {
+                      const unitProgress = progressFor(u.id, 'unit_category');
+                      return (
+                        <UnitRow
+                          key={u.id}
+                          unit={u}
+                          isRenaming={renamingUnitId === u.id}
+                          progress={unitProgress}
+                          onOpen={() => setSelected({ kind: 'unit', target: u, property: p })}
+                          onStartRename={() => setRenamingUnitId(u.id)}
+                          onCancelRename={() => setRenamingUnitId(null)}
+                          onSaveRename={(label) => renameUnit(u, label)}
+                          onDelete={() => deleteUnit(u)}
+                        />
+                      );
+                    })}
+                  </div>
+                  <AddUnitControl
+                    open={adding?.kind === 'unit' && adding.property.id === p.id}
+                    onOpen={() => setAdding({ kind: 'unit', property: p })}
+                    onCancel={() => setAdding(null)}
+                    unusedUnits={(snapshot?.units ?? []).filter(
+                      (u) =>
+                        u.location_id === p.location_id &&
+                        !unitsOf(p.id).some((t) => t.unit_category_id === u.id),
+                    )}
+                    unitLabel={unitLabel}
+                    unitMeta={unitMetaLine}
+                    onAddFromHub={(u, label) => addUnitFromHub(p, u, label)}
+                    onAddOnSite={(label) => addUnitOnSite(p, label)}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <AddPropertyControl
@@ -321,6 +504,99 @@ export default function VisitNavigator({
         Submit visit
       </button>
     </main>
+  );
+}
+
+function UnitRow({
+  unit,
+  isRenaming,
+  progress,
+  onOpen,
+  onStartRename,
+  onCancelRename,
+  onSaveRename,
+  onDelete,
+}: {
+  unit: LocalTarget;
+  isRenaming: boolean;
+  progress: ScopeProgress;
+  onOpen: () => void;
+  onStartRename: () => void;
+  onCancelRename: () => void;
+  onSaveRename: (label: string) => void;
+  onDelete: () => void;
+}) {
+  const [draft, setDraft] = useState(unit.label ?? '');
+
+  // Reset draft whenever we enter rename mode, so a cancel-then-rename starts
+  // from the current label rather than stale state.
+  useEffect(() => {
+    if (isRenaming) setDraft(unit.label ?? '');
+  }, [isRenaming, unit.label]);
+
+  if (isRenaming) {
+    return (
+      <div className="flex items-center gap-2 rounded border border-gray-200 px-2 py-1.5">
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSaveRename(draft);
+            if (e.key === 'Escape') onCancelRename();
+          }}
+          className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+        />
+        <button
+          type="button"
+          onClick={() => onSaveRename(draft)}
+          className="rounded bg-black px-2 py-1 text-xs text-white"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancelRename}
+          className="text-xs text-gray-400 hover:text-gray-700"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded border border-gray-100 hover:bg-gray-50">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm"
+      >
+        <span className="flex-1">{unit.label}</span>
+        {progress.total > 0 ? (
+          <ProgressRing done={progress.done} total={progress.total} size={24} stroke={2} />
+        ) : null}
+        <span aria-hidden className="text-gray-400">›</span>
+      </button>
+      <button
+        type="button"
+        onClick={onStartRename}
+        title="Rename unit"
+        aria-label={`Rename ${unit.label}`}
+        className="px-2 py-1 text-xs text-gray-400 hover:text-gray-700"
+      >
+        ✎
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        title="Delete unit"
+        aria-label={`Delete ${unit.label}`}
+        className="px-2 py-1 text-xs text-gray-400 hover:text-red-600"
+      >
+        🗑
+      </button>
+    </div>
   );
 }
 
@@ -396,18 +672,27 @@ function AddUnitControl({
   onCancel,
   unusedUnits,
   unitLabel,
-  onPickHub,
-  onCreate,
+  unitMeta,
+  onAddFromHub,
+  onAddOnSite,
 }: {
   open: boolean;
   onOpen: () => void;
   onCancel: () => void;
   unusedUnits: HubUnit[];
   unitLabel: (u: HubUnit) => string;
-  onPickHub: (u: HubUnit) => void;
-  onCreate: (label: string) => void;
+  unitMeta?: (u: HubUnit) => string | undefined;
+  onAddFromHub: (u: HubUnit, label: string) => void;
+  onAddOnSite: (label: string) => void;
 }) {
   const [label, setLabel] = useState('');
+  const [selectedHubUnit, setSelectedHubUnit] = useState<HubUnit | null>(null);
+
+  const reset = () => {
+    setLabel('');
+    setSelectedHubUnit(null);
+  };
+
   if (!open) {
     return (
       <button
@@ -418,40 +703,89 @@ function AddUnitControl({
       </button>
     );
   }
+
+  const pickHubUnit = (u: HubUnit) => {
+    setSelectedHubUnit(u);
+    if (!label.trim()) setLabel(unitLabel(u));
+  };
+
+  const submit = () => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    if (selectedHubUnit) onAddFromHub(selectedHubUnit, trimmed);
+    else onAddOnSite(trimmed);
+    reset();
+  };
+
   return (
     <div className="mt-2 rounded border border-gray-200 p-2">
       {unusedUnits.length > 0 && (
         <div className="mb-2">
-          <div className="text-xs text-gray-500">From the hub</div>
-          <div className="mt-1 flex flex-col gap-1">
-            {unusedUnits.map((u) => (
-              <button
-                key={u.id}
-                onClick={() => onPickHub(u)}
-                className="rounded border border-gray-100 px-2 py-1 text-left text-sm hover:bg-gray-50"
-              >
-                {unitLabel(u)}
-              </button>
-            ))}
+          <div className="text-xs text-gray-500">Hub units (tap to attach)</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {unusedUnits.map((u) => {
+              const isSelected = selectedHubUnit?.id === u.id;
+              const meta = unitMeta?.(u);
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => pickHubUnit(u)}
+                  className={`rounded border px-2 py-1 text-left text-xs ${
+                    isSelected
+                      ? 'border-black bg-black text-white'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="leading-tight">{unitLabel(u)}</div>
+                  {meta ? (
+                    <div
+                      className={`text-[10px] leading-tight ${
+                        isSelected ? 'text-gray-300' : 'text-gray-500'
+                      }`}
+                    >
+                      {meta}
+                    </div>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
-      <div className="text-xs text-gray-500">Or add on-site</div>
+      <label className="text-xs text-gray-500">
+        Unit name / room number{' '}
+        <span className="text-gray-400">(always required)</span>
+      </label>
       <div className="mt-1 flex gap-2">
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Unit name"
+          placeholder="e.g. Apt 2A, Bedroom left"
           className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
         />
         <button
-          onClick={() => label.trim() && onCreate(label.trim())}
-          className="rounded bg-black px-3 py-1 text-sm text-white"
+          onClick={submit}
+          disabled={!label.trim()}
+          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
         >
           Add
         </button>
       </div>
-      <button onClick={onCancel} className="mt-1 text-xs text-gray-400 hover:text-gray-700">
+      {selectedHubUnit && (
+        <button
+          onClick={() => setSelectedHubUnit(null)}
+          className="mt-1 text-[11px] text-gray-400 hover:text-gray-700"
+        >
+          Clear hub link (add as on-site only)
+        </button>
+      )}
+      <button
+        onClick={() => {
+          onCancel();
+          reset();
+        }}
+        className="mt-1 ml-2 text-[11px] text-gray-400 hover:text-gray-700"
+      >
         Cancel
       </button>
     </div>

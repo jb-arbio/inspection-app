@@ -1,7 +1,6 @@
 'use client';
 import { useRef } from 'react';
 import { useMediaCapture } from '@/lib/firstVisit/useMediaCapture';
-import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
 
 type MediaKind = 'photo' | 'video';
 
@@ -11,48 +10,60 @@ export function MediaButtons({
   areaKey,
   questionKey,
   answerId,
-  evidence,
+  kinds = ['photo', 'video'],
+  label,
+  description,
+  required,
 }: {
   inspectionId: string;
   targetId: string;
   areaKey: string;
   questionKey?: string;
   answerId?: string;
-  evidence?: FirstVisitQuestion['evidence'];
+  // Which capture surfaces to expose. FV-survey file-typed questions don't
+  // yet split photo vs video so we default to both.
+  kinds?: MediaKind[];
+  label?: string;
+  description?: string | null;
+  required?: boolean;
 }) {
   const { persist } = useMediaCapture(inspectionId);
 
   const onPick = async (kind: MediaKind, file: File | undefined) => {
     if (!file) return;
-    await persist(file, kind, { target_id: targetId, area_key: areaKey, question_key: questionKey, answer_id: answerId });
+    await persist(file, kind, {
+      target_id: targetId,
+      area_key: areaKey,
+      question_key: questionKey,
+      answer_id: answerId,
+    });
   };
 
-  const kinds: MediaKind[] = [];
-  if (evidence?.photo) kinds.push('photo');
-  if (evidence?.video) kinds.push('video');
   if (kinds.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {kinds.map((kind) => (
-        <MediaRow
-          key={kind}
-          kind={kind}
-          required={evidence?.[kind] === 'required'}
-          onPick={(f) => onPick(kind, f)}
-        />
-      ))}
+    <div className="flex flex-col gap-2 p-2">
+      {label && (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="ml-1 text-red-500">*</span>}
+        </span>
+      )}
+      {description && <p className="text-xs text-gray-500">{description}</p>}
+      <div className="flex flex-col gap-1.5">
+        {kinds.map((kind) => (
+          <MediaRow key={kind} kind={kind} onPick={(f) => onPick(kind, f)} />
+        ))}
+      </div>
     </div>
   );
 }
 
 function MediaRow({
   kind,
-  required,
   onPick,
 }: {
   kind: MediaKind;
-  required: boolean;
   onPick: (file: File | undefined) => void;
 }) {
   const captureRef = useRef<HTMLInputElement>(null);
@@ -70,9 +81,7 @@ function MediaRow({
       >
         {captureLabel}
       </button>
-      {required && <span className="text-[10px] uppercase text-red-500">required</span>}
 
-      {/* small, secondary upload affordance */}
       <button
         type="button"
         onClick={() => uploadRef.current?.click()}

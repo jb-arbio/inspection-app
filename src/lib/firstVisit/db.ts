@@ -68,6 +68,7 @@ export type OutboxJob = {
   kind:
     | 'inspection_upsert'
     | 'target_upsert'
+    | 'target_delete'
     | 'answer_upsert'
     | 'media_upload'
     | 'media_metadata'

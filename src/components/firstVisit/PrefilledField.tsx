@@ -1,5 +1,7 @@
 'use client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
+import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRing';
 
 export type PrefilledFieldProps = {
   question: FirstVisitQuestion;
@@ -8,79 +10,310 @@ export type PrefilledFieldProps = {
   onChange: (next: { value: unknown; wasAcceptedAsIs: boolean }) => void;
 };
 
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// How long the "✓ Saved" pill stays visible before fading out.
+const SAVED_VISIBLE_MS = 1200;
+// Debounce delay for text/textarea inputs so the pulse only fires after the
+// inspector pauses typing — typing every keystroke would be noisy.
+const TEXT_DEBOUNCE_MS = 600;
+
 export function PrefilledField({ question, hubValue, value, onChange }: PrefilledFieldProps) {
   const hasHub = hubValue !== undefined && hubValue !== null && hubValue !== '';
-  const id = `q-${question.question_key}`;
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">{question.label}</label>
-      {hasHub && (
-        <div className="flex items-center gap-2 rounded bg-yellow-50 px-2 py-1 text-xs">
-          <span className="rounded bg-yellow-200 px-1 py-0.5">Pre-filled</span>
-          <span className="text-yellow-900">{String(hubValue)}</span>
+  const id = `q-${question.slug}`;
+  // 'observe' mode is freeform observational — render as textarea for text fields.
+  const isLongText = question.type === 'text' && question.mode === 'observe';
+  const skipped = isSkipped(value);
+
+  // Tiny confirmation pulse — shows next to the field after a value persists so
+  // the inspector gets a trust signal that their input didn't vanish.
+  const [showSaved, setShowSaved] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (hideRef.current) {
+      clearTimeout(hideRef.current);
+      hideRef.current = null;
+    }
+  }, []);
+
+  const triggerSaved = useCallback(() => {
+    if (hideRef.current) clearTimeout(hideRef.current);
+    setShowSaved(true);
+    hideRef.current = setTimeout(() => setShowSaved(false), SAVED_VISIBLE_MS);
+  }, []);
+
+  const pulseImmediate = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    triggerSaved();
+  }, [triggerSaved]);
+
+  const pulseDebounced = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      triggerSaved();
+    }, TEXT_DEBOUNCE_MS);
+  }, [triggerSaved]);
+
+  useEffect(() => clearTimers, [clearTimers]);
+
+  // Auto-fill date fields with today's date once on mount, so the inspector
+  // confirms by leaving it rather than typing it. They can clear or change it.
+  const didAutofillDate = useRef(false);
+  useEffect(() => {
+    if (didAutofillDate.current) return;
+    if (question.type !== 'date') return;
+    if (value !== null && value !== undefined && value !== '') return;
+    didAutofillDate.current = true;
+    onChange({ value: todayIso(), wasAcceptedAsIs: false });
+    // mount-only: we only want the today default to fire on first display per
+    // PrefilledField lifecycle, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Skipped questions render in a collapsed read-only state with one-tap undo.
+  if (skipped) {
+    const sv = value as SkippedValue;
+    return (
+      <div className="flex flex-col gap-1 rounded-md bg-gray-50 p-3">
+        <div className="flex items-start gap-2">
+          <span className="text-sm font-medium text-gray-700 line-through">
+            {question.label}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-gray-600">
+            <span className="rounded bg-gray-200 px-1.5 py-0.5 font-medium uppercase tracking-wide">
+              N/A
+            </span>
+            {sv.reason && <span className="ml-2 italic">{sv.reason}</span>}
+          </span>
           <button
             type="button"
-            className="ml-auto rounded bg-yellow-200 px-2 py-0.5"
-            onClick={() => onChange({ value: hubValue, wasAcceptedAsIs: true })}
+            onClick={() => onChange({ value: null, wasAcceptedAsIs: false })}
+            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-white"
+          >
+            Undo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col gap-1 p-2">
+      {/* Saved confirmation pulse — small, emerald, fades out. Lives inside the
+          main field container so the skipped early-return never renders it. */}
+      <span
+        aria-live="polite"
+        aria-hidden={!showSaved}
+        className={`pointer-events-none absolute right-2 top-2 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-emerald-700 transition-opacity duration-300 ${
+          showSaved ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        ✓ Saved
+      </span>
+      <label htmlFor={id} className="text-sm font-medium">
+        {question.label}
+        {question.required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      {question.description && (
+        <p className="text-xs text-gray-500">{question.description}</p>
+      )}
+
+      {hasHub && (
+        <div className="flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm">
+          <span className="rounded bg-yellow-200 px-1.5 py-0.5 text-xs font-medium">
+            Pre-filled
+          </span>
+          <span className="truncate text-yellow-900">{String(hubValue)}</span>
+          <button
+            type="button"
+            className="ml-auto rounded-md bg-yellow-300 px-3 py-2 text-sm font-medium hover:bg-yellow-400 active:bg-yellow-500"
+            onClick={() => {
+              onChange({ value: hubValue, wasAcceptedAsIs: true });
+              pulseImmediate();
+            }}
           >
             Accept
           </button>
         </div>
       )}
-      {question.field_type === 'text' && (
+
+      {question.type === 'text' && !isLongText && (
         <input
           id={id}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-md border border-gray-300 px-3 py-2 text-base"
           value={value == null ? '' : String(value)}
-          onChange={(e) => onChange({ value: e.target.value, wasAcceptedAsIs: false })}
+          onChange={(e) => {
+            onChange({ value: e.target.value, wasAcceptedAsIs: false });
+            pulseDebounced();
+          }}
         />
       )}
-      {question.field_type === 'number' && (
+      {question.type === 'text' && isLongText && (
+        <textarea
+          id={id}
+          rows={3}
+          className="rounded-md border border-gray-300 px-3 py-2 text-base"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => {
+            onChange({ value: e.target.value, wasAcceptedAsIs: false });
+            pulseDebounced();
+          }}
+        />
+      )}
+      {question.type === 'number' && (
         <input
           id={id}
           type="number"
-          className="rounded border border-gray-300 px-2 py-1"
+          inputMode="numeric"
+          className="rounded-md border border-gray-300 px-3 py-2 text-base"
           value={value == null ? '' : String(value)}
-          onChange={(e) =>
-            onChange({ value: e.target.value === '' ? null : Number(e.target.value), wasAcceptedAsIs: false })
-          }
+          onChange={(e) => {
+            onChange({
+              value: e.target.value === '' ? null : Number(e.target.value),
+              wasAcceptedAsIs: false,
+            });
+            pulseImmediate();
+          }}
         />
       )}
-      {question.field_type === 'select' && (
+      {question.type === 'date' && (
+        <input
+          id={id}
+          type="date"
+          className="rounded-md border border-gray-300 px-3 py-2 text-base"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => {
+            onChange({ value: e.target.value, wasAcceptedAsIs: false });
+            pulseImmediate();
+          }}
+        />
+      )}
+      {question.type === 'select' && (
         <select
           id={id}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="rounded-md border border-gray-300 px-3 py-2 text-base"
           value={value == null ? '' : String(value)}
-          onChange={(e) => onChange({ value: e.target.value, wasAcceptedAsIs: false })}
+          onChange={(e) => {
+            onChange({ value: e.target.value, wasAcceptedAsIs: false });
+            pulseImmediate();
+          }}
         >
           <option value="" />
-          {(question.choices ?? []).map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+          {question.options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
       )}
-      {question.field_type === 'boolean' && (
+      {question.type === 'boolean' && (
         <div className="flex gap-2">
           {/* Hidden input keeps label htmlFor target resolvable for a11y/tests */}
           <input type="hidden" id={id} aria-label={question.label} />
           <button
             type="button"
             aria-pressed={value === true}
-            className={`rounded px-3 py-1 ${value === true ? 'bg-black text-white' : 'border border-gray-300'}`}
-            onClick={() => onChange({ value: true, wasAcceptedAsIs: false })}
+            className={`flex-1 rounded-md px-4 py-3 text-base font-medium transition active:scale-[0.98] ${
+              value === true
+                ? 'bg-black text-white'
+                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={() => {
+              onChange({ value: true, wasAcceptedAsIs: false });
+              pulseImmediate();
+            }}
           >
             Yes
           </button>
           <button
             type="button"
             aria-pressed={value === false}
-            className={`rounded px-3 py-1 ${value === false ? 'bg-black text-white' : 'border border-gray-300'}`}
-            onClick={() => onChange({ value: false, wasAcceptedAsIs: false })}
+            className={`flex-1 rounded-md px-4 py-3 text-base font-medium transition active:scale-[0.98] ${
+              value === false
+                ? 'bg-black text-white'
+                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={() => {
+              onChange({ value: false, wasAcceptedAsIs: false });
+              pulseImmediate();
+            }}
           >
             No
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// type=repeater is a stub: the sub-form schema lands in a later session. For
+// now we let the inspector add free-text items so demos can still capture them.
+export function RepeaterStub({
+  question,
+  value,
+  onChange,
+}: {
+  question: FirstVisitQuestion;
+  value: unknown;
+  onChange: (next: { value: unknown; wasAcceptedAsIs: boolean }) => void;
+}) {
+  const items: string[] = Array.isArray(value) ? (value as string[]) : [];
+  const set = (next: string[]) => onChange({ value: next, wasAcceptedAsIs: false });
+  return (
+    <div className="flex flex-col gap-2 p-2">
+      <label className="text-sm font-medium">
+        {question.label}
+        {question.required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      {question.description && (
+        <p className="text-xs text-gray-500">{question.description}</p>
+      )}
+      <p className="text-[11px] italic text-gray-400">
+        Sub-form schema not finalised yet — add free-text items for now.
+      </p>
+      <ul className="flex flex-col gap-1">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <input
+              value={item}
+              onChange={(e) => {
+                const next = items.slice();
+                next[i] = e.target.value;
+                set(next);
+              }}
+              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => set(items.filter((_, j) => j !== i))}
+              className="text-xs text-gray-400 hover:text-red-500"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => set([...items, ''])}
+        className="self-start rounded border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+      >
+        + Add item
+      </button>
     </div>
   );
 }

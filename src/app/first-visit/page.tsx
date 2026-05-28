@@ -6,6 +6,12 @@ export const dynamic = 'force-dynamic';
 export default function FirstVisitLanding() {
   return (
     <main className="mx-auto max-w-md p-6">
+      <Link
+        href="/"
+        className="mb-3 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"
+      >
+        ← Back to mode picker
+      </Link>
       <h1 className="text-xl font-semibold">First Visit Survey</h1>
       <Link
         href="/first-visit/new"

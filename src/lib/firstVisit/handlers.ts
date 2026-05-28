@@ -19,6 +19,11 @@ export function createHandlers(): JobHandlers {
     target_upsert: async (p) => {
       await postJSON('/api/first-visit/targets', p);
     },
+    target_delete: async () => {
+      // TODO: Hub-side deletion of target/location/unit_category rows. For now
+      // we only remove from Dexie locally; the server is a no-op so the job
+      // simply succeeds and is dropped from the outbox.
+    },
     answer_upsert: async (p) => {
       await postJSON('/api/first-visit/answers', p);
       const a = p as { id: string };
