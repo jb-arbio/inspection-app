@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { localDb, type LocalAnswer, type LocalTarget } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
@@ -371,12 +372,67 @@ export default function VisitNavigator({
   }
 
   // --- Navigator view ------------------------------------------------------
+  const dealName = snapshot?.deal?.name?.trim() || visitTitle;
+  const locationLabels = (snapshot?.locations ?? [])
+    .map((l) => l.display_name?.trim())
+    .filter((s): s is string => !!s);
+  const addressLine =
+    locationLabels.length === 0
+      ? undefined
+      : locationLabels.length === 1
+        ? locationLabels[0]
+        : `${locationLabels[0]} (+${locationLabels.length - 1} more)`;
+
   return (
     <main className="mx-auto max-w-md p-6">
       <header className="sticky top-0 z-10 bg-white pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-lg font-semibold">{visitTitle ?? 'First Visit'}</h1>
-          <div className="flex items-center gap-2 text-xs">
+        {/* Thin nav chrome — back to deal picker on the left, home on the right. */}
+        <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
+          <Link
+            href="/first-visit/new"
+            className="inline-flex items-center gap-1 hover:text-gray-900"
+          >
+            <span aria-hidden>←</span> Pick another deal
+          </Link>
+          <Link
+            href="/first-visit"
+            aria-label="Home"
+            title="Home — my visits"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M3 11.5 12 4l9 7.5" />
+              <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" />
+            </svg>
+          </Link>
+        </div>
+
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {dealName ? (
+              <h1 className="truncate text-lg font-semibold">{dealName}</h1>
+            ) : (
+              // Skeleton until the snapshot fetch lands — avoids flashing a
+              // stale "First Visit" label before the deal name arrives.
+              <div className="h-6 w-40 animate-pulse rounded bg-gray-200" aria-hidden />
+            )}
+            {addressLine ? (
+              <p className="truncate text-xs text-gray-500">{addressLine}</p>
+            ) : !snapshot ? (
+              <div className="mt-1 h-3 w-56 animate-pulse rounded bg-gray-100" aria-hidden />
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs">
             <SyncBadge pending={pending} syncing={syncing} />
             <button
               onClick={syncNow}

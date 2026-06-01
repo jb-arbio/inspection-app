@@ -277,9 +277,11 @@ export function UnitSurvey({
       >
         ← Back to visit
       </button>
-      {breadcrumb && breadcrumb.length > 0 && (
+      {breadcrumb && breadcrumb.length > 1 && (
+        // Show only the parent context — the last item duplicates the H1.
+        // For property scope the breadcrumb is single-item, so nothing renders.
         <div className="mb-3 text-xs text-gray-400">
-          {breadcrumb.map((crumb, i) => (
+          {breadcrumb.slice(0, -1).map((crumb, i) => (
             <span key={i}>
               {i > 0 && <span className="mx-1 text-gray-300">›</span>}
               <span>{crumb}</span>

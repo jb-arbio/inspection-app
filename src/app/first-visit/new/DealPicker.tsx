@@ -1,7 +1,37 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { localDb } from '@/lib/firstVisit/db';
+import { enqueue } from '@/lib/firstVisit/sync';
 import { track } from '@/lib/firstVisit/analytics';
+
+// Picking (or creating) a deal routes straight into the navigator — no
+// intermediate "Start visit" screen. If a draft inspection already exists for
+// the deal locally, we resume it instead of creating yet another row.
+async function resumeOrStartVisit(dealId: string): Promise<{ id: string; resumed: boolean }> {
+  const existing = await localDb.inspections
+    .where('deal_id')
+    .equals(dealId)
+    .toArray();
+  const draft = existing
+    .filter((i) => i.status === 'draft')
+    .sort((a, b) => (a.started_at < b.started_at ? 1 : -1))[0];
+  if (draft) {
+    return { id: draft.id, resumed: true };
+  }
+  const id = crypto.randomUUID();
+  const inspection = {
+    id,
+    deal_id: dealId,
+    status: 'draft' as const,
+    inspector_email: '', // filled server-side from session
+    started_at: new Date().toISOString(),
+  };
+  await localDb.inspections.put(inspection);
+  await enqueue('inspection_upsert', inspection);
+  track('first_visit_started', { inspection_id: id, deal_id: dealId });
+  return { id, resumed: false };
+}
 
 export default function DealPicker({ deals }: { deals: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -10,6 +40,12 @@ export default function DealPicker({ deals }: { deals: { id: string; name: strin
   const [formType, setFormType] = useState<'care' | 'greenfield'>('care');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const pickDeal = async (dealId: string, created: boolean) => {
+    const { id, resumed } = await resumeOrStartVisit(dealId);
+    track('deal_selected', { deal_id: dealId, created, resumed });
+    router.push(`/first-visit/${dealId}/${id}`);
+  };
 
   const create = async () => {
     if (!name.trim()) {
@@ -29,8 +65,7 @@ export default function DealPicker({ deals }: { deals: { id: string; name: strin
         throw new Error(body?.error ?? `HTTP ${res.status}`);
       }
       const { deal } = await res.json();
-      track('deal_selected', { deal_id: deal.id, created: true });
-      router.push(`/first-visit/${deal.id}`);
+      await pickDeal(deal.id, true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setSubmitting(false);
@@ -46,11 +81,8 @@ export default function DealPicker({ deals }: { deals: { id: string; name: strin
           {deals.map((d) => (
             <li key={d.id}>
               <button
-                onClick={() => {
-                  track('deal_selected', { deal_id: d.id });
-                  router.push(`/first-visit/${d.id}`);
-                }}
-                className="block w-full rounded border border-gray-200 p-3 text-left"
+                onClick={() => pickDeal(d.id, false)}
+                className="block w-full rounded border border-gray-200 p-3 text-left hover:bg-gray-50"
               >
                 <div className="text-sm font-medium">{d.name}</div>
                 <div className="text-xs text-gray-500">{d.id}</div>

@@ -51,6 +51,45 @@ type RawConfig = {
 
 const RAW = config as unknown as RawConfig;
 
+// Many XLSX-source descriptions are operational notes for PMs, not guidance
+// for the field inspector ("Pre-filled from ClickUp; PM only confirms",
+// "From Final Info DB; auto-fillable", etc.). They add noise on the phone.
+// Anything matching these patterns is stripped to null at load time so the
+// UI only ever shows descriptions that actually help fill out the question.
+const OPERATIONAL_DESCRIPTION_PATTERNS: RegExp[] = [
+  /\bPM\b/,
+  /clickup/i,
+  /final info db/i,
+  /auto[- ]?fill/i,
+  /auto[- ]?generated/i,
+  /pre[- ]?filled/i,
+  /host faq/i,
+  /\bdata point\b/i,
+  /deals table/i,
+  /validates_host_faq/i,
+  /\bfv_/,
+  /\[gaps/i,
+  /resumable post-visit/i,
+  /geoapify/i,
+  /hub auto/i,
+  /from hub\b/i,
+  /^dropdown of/i,
+];
+
+function isOperationalDescription(d: string | null | undefined): boolean {
+  if (!d) return false;
+  return OPERATIONAL_DESCRIPTION_PATTERNS.some((p) => p.test(d));
+}
+
+function stripOperationalDescriptions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
+  return phases.map((p) => ({
+    ...p,
+    questions: p.questions.map((q) =>
+      isOperationalDescription(q.description) ? { ...q, description: null } : q,
+    ),
+  }));
+}
+
 // Defensive dedup: the XLSX-driven generator can emit the same slug twice within
 // a phase (content bug). Two rows sharing a slug would collide on the Dexie
 // compound key [target_id+question_key+area_key] and produce duplicate React
@@ -89,7 +128,9 @@ function dedupePhases(phases: FirstVisitPhase[]): FirstVisitPhase[] {
   });
 }
 
-export const PHASES: FirstVisitPhase[] = dedupePhases(RAW.phases);
+export const PHASES: FirstVisitPhase[] = stripOperationalDescriptions(
+  dedupePhases(RAW.phases),
+);
 export const ALL_QUESTIONS: FirstVisitQuestion[] = PHASES.flatMap((p) => p.questions);
 
 // Counts are recomputed from the deduplicated PHASES so the metadata stays in
