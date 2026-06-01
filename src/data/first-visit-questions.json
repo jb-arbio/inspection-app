@@ -1350,7 +1350,7 @@
         {
           "slug": "fv_facility_manager_contact",
           "label": "Facility manager / Hausverwaltung contact",
-          "description": "Opportunistic — only if encountered",
+          "description": "Important for ops handover — try to obtain on-site (name + phone or email).",
           "scope": "location",
           "mode": "data",
           "type": "text",
@@ -1442,14 +1442,14 @@
           "phase_label": "Building infrastructure & utilities (fire safety)"
         },
         {
-          "slug": "fv_common_area (repeater)",
-          "label": "Common areas / building facilities — repeater",
+          "slug": "fv_common_area",
+          "label": "Common areas / building facilities",
           "description": "One entry per shared space. Visitor walks the building and documents each common area found.",
           "scope": "location",
           "mode": "data",
           "type": "select",
           "options": [
-            "type: Lobby",
+            "Lobby",
             "Rooftop",
             "Courtyard",
             "SmokingArea",
@@ -1602,14 +1602,14 @@
           "phase_label": "Building infrastructure & utilities"
         },
         {
-          "slug": "fv_utility_provider (repeater)",
-          "label": "Utility providers — repeater",
+          "slug": "fv_utility_provider",
+          "label": "Utility providers",
           "description": "One entry per utility company. Visitor asks Hausmeister/property manager for emergency contacts (Vattenfall, Stadtwerke, etc.).",
           "scope": "location",
           "mode": "data",
           "type": "select",
           "options": [
-            "providerType: Electricity",
+            "Electricity",
             "Water",
             "Gas",
             "Internet"
@@ -1624,14 +1624,14 @@
           "phase_label": "Building infrastructure & utilities"
         },
         {
-          "slug": "fv_maintenance_procedure (repeater)",
-          "label": "Maintenance procedures — repeater",
+          "slug": "fv_maintenance_procedure",
+          "label": "Maintenance procedures",
           "description": "One entry per staff-facing procedure (e.g. Bathroom ventilation, Fire alarm response, No electricity response). Visitor documents observed steps with photos / video.",
           "scope": "location",
           "mode": "data",
           "type": "select",
           "options": [
-            "category: Plumbing",
+            "Plumbing",
             "Electrical",
             "HVAC",
             "Appliance",
@@ -1855,15 +1855,21 @@
           "phase_label": "Building services & operational model"
         },
         {
-          "slug": "fv_house_rule (repeater)",
-          "label": "House rules — repeater",
+          "slug": "fv_house_rule",
+          "label": "House rules",
           "description": "8 standard Arbio rules pre-populated (noise curfew, no unregistered guests, no pets, no parties, no smoking, respect check-in/out, dispose garbage in cans, close windows + turn off appliances before leaving). Visitor confirms + adds property-specific rules.",
           "scope": "location",
           "mode": "data",
           "type": "select",
           "options": [
-            "locale: en",
-            "de"
+            "Noise curfew (22:00–07:00)",
+            "No unregistered guests",
+            "No pets",
+            "No parties",
+            "No smoking",
+            "Respect check-in/out times",
+            "Dispose garbage in cans",
+            "Close windows + turn off appliances before leaving"
           ],
           "required": false,
           "repeater": false,
@@ -2536,7 +2542,7 @@
       "questions": [
         {
           "slug": "(repeater header)",
-          "label": "Appliances & amenities — repeater section",
+          "label": "Appliances & amenities",
           "description": "One entry per appliance/amenity. Form starts with up to 13 pre-populated item names (optional — could also start empty): Washing machine, Heating, Air conditioning, Dishwasher, TV / Smart TV, Stove / oven, Coffee machine, Iron + ironing board, Vacuum cleaner, Hairdryer, First-aid kit, Cleaning supplies, plus an 'Other' free row. NO other pre-fill — sub-fields below are blank for visitor to fill. Visitor can remove, edit, or add items. Each entry maps to one row in PMS equipmentAndAmenities[].",
           "scope": "unit_category",
           "mode": "data",
@@ -3133,15 +3139,18 @@
         },
         {
           "slug": "fv_checkout_trash_disposal",
-          "label": "Trash disposal at check-out",
+          "label": "Include trash instructions in check-out guide?",
           "description": null,
           "scope": "location",
           "mode": "data",
-          "type": "text",
-          "options": [],
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
           "required": true,
           "repeater": false,
-          "pms_target": "houseRules.garbageDisposal.trashLocationInstructions.description",
+          "pms_target": "houseRules.garbageDisposal.trashLocationInstructions.description [GAP — currently routes to .description; rewire to .checkOutInstructions.includeTrashInstructions (proposed)]",
           "status": "existing",
           "verdict": null,
           "notes": null,
@@ -3210,21 +3219,38 @@
           "phase_label": "Final assessment / readiness"
         },
         {
-          "slug": "fv_readiness_go_live_date",
-          "label": "Recommended go-live date",
+          "slug": "fv_readiness_go_live_recommendation",
+          "label": "Recommended go-live",
           "description": null,
           "scope": "deal",
           "mode": "data",
           "type": "select",
           "options": [
-            "Hold to planned",
-            "Delay N weeks",
-            "Cannot recommend yet"
+            "Go on planned date",
+            "Delay",
+            "Cannot recommend yet (major blockers)"
           ],
           "required": true,
           "repeater": false,
-          "pms_target": "dealProfile.goLiveDate (existing — should route here)",
-          "status": "existing",
+          "pms_target": "dealProfile.goLiveRecommendation  [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "11",
+          "phase_label": "Final assessment / readiness"
+        },
+        {
+          "slug": "fv_readiness_go_live_delay_weeks",
+          "label": "How many weeks delay?",
+          "description": "Only if Delay selected",
+          "scope": "deal",
+          "mode": "data",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "dealProfile.goLiveDelayWeeks  [proposed]",
+          "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "11",
