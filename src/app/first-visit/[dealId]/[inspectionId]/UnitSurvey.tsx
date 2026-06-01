@@ -50,6 +50,8 @@ export function UnitSurvey({
   const [currentIdx, setCurrentIdx] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
   const activeChipRef = useRef<HTMLButtonElement>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const didMountRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -68,9 +70,16 @@ export function UnitSurvey({
     setCurrentIdx(0);
   }, [target.id]);
 
-  // Keep the active section chip visible in the strip when it changes.
+  // Keep the active section chip visible in the strip when it changes, and
+  // bring the new section header into view on the page itself. Skip on first
+  // mount so we don't snap the page on initial load.
   useEffect(() => {
     activeChipRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentIdx]);
 
   const onChange = async (
@@ -356,7 +365,7 @@ export function UnitSurvey({
         </div>
       </div>
 
-      <section key={phase.id} className="mt-4">
+      <section key={phase.id} ref={sectionRef} className="mt-4 scroll-mt-20">
         <div className="text-sm font-medium uppercase tracking-wide text-gray-500">
           {phase.label}
         </div>
@@ -468,14 +477,23 @@ export function UnitSurvey({
         <div className="text-xs text-gray-400 tabular-nums">
           {currentIdx + 1} / {phases.length}
         </div>
-        <button
-          type="button"
-          onClick={() => !isLast && setCurrentIdx((i) => i + 1)}
-          disabled={isLast}
-          className="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-40"
-        >
-          Next →
-        </button>
+        {isLast ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-md bg-black px-4 py-2 text-sm text-white"
+          >
+            Done — back to overview ↩
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCurrentIdx((i) => i + 1)}
+            className="rounded-md bg-black px-4 py-2 text-sm text-white"
+          >
+            Next →
+          </button>
+        )}
       </div>
     </main>
   );
