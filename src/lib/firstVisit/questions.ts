@@ -39,6 +39,41 @@ export type FirstVisitQuestion = {
   // generated JSON yet — WS-C will introduce it. Until then this is
   // always undefined and groupIdFor() returns null.
   group_id?: string | null;
+  // Renders the question as a chip-style multi-select picker. Combined with
+  // `options`, each option becomes a toggleable chip. WS-C will set this on
+  // the JSON. Backwards-compatible: when undefined the legacy renderer is used.
+  multi_select?: boolean;
+  // When `multi_select` is true and this is true, an inline "+ Add custom"
+  // input is rendered so the inspector can append free-text options to the
+  // picker. The custom strings are stored in `value` exactly like standard
+  // options — no separate field. Optional, WS-C populates this.
+  allow_custom_options?: boolean;
+  // Conditional follow-up field that appears below this question when its
+  // value matches `when_value`. Used for boolean Yes/No follow-ups
+  // ("Secondary fire exit available?" → "Where?") and select-value follow-ups.
+  // Storage: the follow-up text lives as a sibling answer with synthetic
+  // question_key `${parent.slug}__follow_up`, same target/area, same
+  // step_index as the parent.
+  follow_up?: {
+    when_value: unknown;
+    label: string;
+    type: 'text' | 'number';
+    required?: boolean;
+  };
+  // Per-option follow-up renderer for multi-select pickers. For each chip
+  // the inspector selects, an inline labeled input appears below the picker
+  // using `label_template` with `{option}` substituted. Storage: each
+  // option's follow-up lives as a sibling answer with synthetic question_key
+  // `${parent.slug}__per_option__${slugify(option)}` (no step_index).
+  per_option_follow_up?: {
+    label_template: string;
+    type: 'text';
+    required?: boolean;
+  };
+  // Slug of another question this one should render under (used by WS-F for
+  // media anchoring). Renderer in WS-B does not act on this; it is here so
+  // the type is ready for WS-F.
+  anchor_to?: string;
 };
 
 export type FirstVisitPhase = {

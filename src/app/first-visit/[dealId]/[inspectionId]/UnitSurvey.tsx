@@ -3,14 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   phasesForScope,
   areaKeyFor,
+  groupIdFor,
   type FirstVisitQuestion,
 } from '@/lib/firstVisit/questions';
-import { PrefilledField, RepeaterStub } from '@/components/firstVisit/PrefilledField';
+import { RepeaterStub } from '@/components/firstVisit/PrefilledField';
 import { MediaButtons } from '@/components/firstVisit/MediaButtons';
-import { SkipAffordance } from '@/components/firstVisit/SkipAffordance';
 import { AttachAffordance } from '@/components/firstVisit/AttachAffordance';
 import { CopyFromUnitPicker } from '@/components/firstVisit/CopyFromUnitPicker';
 import { ProgressRing, isAnswered } from '@/components/firstVisit/ProgressRing';
+import { StepGroup, QuestionRow } from '@/components/firstVisit/StepGroup';
 import { localDb, type LocalAnswer } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import {
@@ -60,7 +61,14 @@ export function UnitSurvey({
         .equals(target.id)
         .toArray();
       const map: Record<string, LocalAnswer> = {};
-      for (const r of rows) map[`${r.target_id}::${r.area_key}::${r.question_key}`] = r;
+      for (const r of rows) {
+        const base = `${r.target_id}::${r.area_key}::${r.question_key}`;
+        // Repeater-aware answers (step_index set) get a step-suffixed key so
+        // multiple blocks of the same group don't collide in the map. Single-
+        // instance answers keep the legacy 3-part key.
+        const key = r.step_index == null ? base : `${base}::${r.step_index}`;
+        map[key] = r;
+      }
       setAnswers(map);
     })();
   }, [target.id]);
@@ -85,9 +93,16 @@ export function UnitSurvey({
   const onChange = async (
     q: FirstVisitQuestion,
     next: { value: unknown; wasAcceptedAsIs: boolean },
+    stepIndex: number | null = null,
+    syntheticQuestionKey?: string,
   ) => {
     const areaKey = areaKeyFor(q);
-    const key = `${target.id}::${areaKey}::${q.slug}`;
+    // syntheticQuestionKey lets the renderer route follow-up answers
+    // (`${slug}__follow_up`, `${slug}__per_option__${slug(opt)}`) into the
+    // same answers table without minting a question on the JSON config.
+    const questionKey = syntheticQuestionKey ?? q.slug;
+    const baseKey = `${target.id}::${areaKey}::${questionKey}`;
+    const key = stepIndex == null ? baseKey : `${baseKey}::${stepIndex}`;
     const now = new Date().toISOString();
     const existing = answers[key];
     const row: LocalAnswer = {
@@ -97,10 +112,11 @@ export function UnitSurvey({
       scope,
       location_id: ctx.location_id,
       unit_category_id: ctx.unit_category_id,
-      question_key: q.slug,
+      question_key: questionKey,
       area_key: areaKey,
+      step_index: stepIndex,
       value: next.value,
-      data_point_slug: q.slug,
+      data_point_slug: questionKey,
       hub_suggestion_snapshot: existing?.hub_suggestion_snapshot,
       was_prefilled: !!existing?.was_prefilled,
       was_accepted_as_is: next.wasAcceptedAsIs,
@@ -108,7 +124,7 @@ export function UnitSurvey({
       updated_at: now,
     };
     await localDb.answers.put(row);
-    track('answer_saved', { question_key: q.slug, inspection_id: inspectionId });
+    track('answer_saved', { question_key: questionKey, inspection_id: inspectionId });
     setAnswers((a) => ({ ...a, [key]: row }));
     await enqueue('answer_upsert', row);
   };
@@ -116,9 +132,14 @@ export function UnitSurvey({
   // Update just the notes field on an answer row without touching value /
   // wasAcceptedAsIs. Creates a stub answer row if none exists yet so the note
   // survives across sessions even before the inspector picks a value.
-  const setNotes = async (q: FirstVisitQuestion, nextNotes: string) => {
+  const setNotes = async (
+    q: FirstVisitQuestion,
+    nextNotes: string,
+    stepIndex: number | null = null,
+  ) => {
     const areaKey = areaKeyFor(q);
-    const key = `${target.id}::${areaKey}::${q.slug}`;
+    const baseKey = `${target.id}::${areaKey}::${q.slug}`;
+    const key = stepIndex == null ? baseKey : `${baseKey}::${stepIndex}`;
     const now = new Date().toISOString();
     const existing = answers[key];
     const row: LocalAnswer = {
@@ -130,6 +151,7 @@ export function UnitSurvey({
       unit_category_id: ctx.unit_category_id,
       question_key: q.slug,
       area_key: areaKey,
+      step_index: stepIndex,
       value: existing?.value ?? null,
       notes: nextNotes,
       data_point_slug: q.slug,
@@ -373,7 +395,27 @@ export function UnitSurvey({
           {phase.label}
         </div>
         <div className="mt-2 flex flex-col gap-3">
-          {phase.questions.map((q) => {
+          {buildRenderPlan(phase.questions).map((node) => {
+            if (node.kind === 'group') {
+              return (
+                <StepGroup
+                  key={`group-${node.groupId}`}
+                  groupId={node.groupId}
+                  questions={node.questions}
+                  inspectionId={inspectionId}
+                  targetId={target.id}
+                  areaKey={phase.id}
+                  hubValueLookup={(slug) =>
+                    snapshot ? lookupHubValue(snapshot, scopeId, slug) : undefined
+                  }
+                  answers={answers}
+                  onChange={onChange}
+                  setNotes={setNotes}
+                />
+              );
+            }
+
+            const q = node.question;
             const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
             const answer = answers[key];
 
@@ -425,30 +467,18 @@ export function UnitSurvey({
             }
 
             return (
-              <div key={key} className="flex flex-col gap-1">
-                <PrefilledField
-                  question={q}
-                  hubValue={
-                    snapshot ? lookupHubValue(snapshot, scopeId, q.slug) : undefined
-                  }
-                  value={answer?.value ?? ''}
-                  onChange={(c) => onChange(q, c)}
-                />
-                <SkipAffordance
-                  question={q}
-                  value={answer?.value}
-                  onChange={(c) => onChange(q, c)}
-                />
-                <AttachAffordance
-                  inspectionId={inspectionId}
-                  targetId={target.id}
-                  areaKey={phase.id}
-                  questionKey={q.slug}
-                  answerId={answer?.id}
-                  notes={answer?.notes}
-                  onNotesChange={(n) => setNotes(q, n)}
-                />
-              </div>
+              <QuestionRow
+                key={key}
+                question={q}
+                inspectionId={inspectionId}
+                targetId={target.id}
+                areaKey={phase.id}
+                stepIndex={null}
+                hubValue={snapshot ? lookupHubValue(snapshot, scopeId, q.slug) : undefined}
+                answers={answers}
+                onChange={onChange}
+                setNotes={setNotes}
+              />
             );
           })}
         </div>
@@ -504,4 +534,40 @@ export function UnitSurvey({
       </div>
     </main>
   );
+}
+
+// Render plan node: either a single flat question or a grouped block of
+// consecutive questions sharing a `group_id`. We walk the phase's question
+// list once and merge runs of equal group_id into a single 'group' node so
+// the StepGroup renderer owns the block lifecycle for that span.
+type RenderNode =
+  | { kind: 'question'; question: FirstVisitQuestion }
+  | { kind: 'group'; groupId: string; questions: FirstVisitQuestion[] };
+
+function buildRenderPlan(questions: FirstVisitQuestion[]): RenderNode[] {
+  const out: RenderNode[] = [];
+  let bucket: { groupId: string; questions: FirstVisitQuestion[] } | null = null;
+  for (const q of questions) {
+    const gid = groupIdFor(q);
+    if (gid == null) {
+      if (bucket) {
+        out.push({ kind: 'group', groupId: bucket.groupId, questions: bucket.questions });
+        bucket = null;
+      }
+      out.push({ kind: 'question', question: q });
+      continue;
+    }
+    if (bucket && bucket.groupId === gid) {
+      bucket.questions.push(q);
+    } else {
+      if (bucket) {
+        out.push({ kind: 'group', groupId: bucket.groupId, questions: bucket.questions });
+      }
+      bucket = { groupId: gid, questions: [q] };
+    }
+  }
+  if (bucket) {
+    out.push({ kind: 'group', groupId: bucket.groupId, questions: bucket.questions });
+  }
+  return out;
 }
