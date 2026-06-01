@@ -8,6 +8,13 @@ export async function POST(req: Request) {
   const { supabase } = ctx;
 
   const a = await req.json();
+  // step_index coordinate for block-repeater answers. Accepted as either a
+  // finite number or null; anything else (undefined, string, NaN) collapses
+  // to null so the column stays clean.
+  const stepIndex =
+    typeof a.step_index === 'number' && Number.isFinite(a.step_index)
+      ? a.step_index
+      : null;
   const row = {
     id: a.id,
     inspection_id: a.inspection_id,
@@ -17,6 +24,7 @@ export async function POST(req: Request) {
     unit_category_id: a.unit_category_id ?? null,
     question_key: a.question_key,
     area_key: a.area_key,
+    step_index: stepIndex,
     value: a.value ?? null,
     notes: a.notes ?? null,
     data_point_slug: a.data_point_slug ?? null,

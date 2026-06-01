@@ -5,6 +5,8 @@ import {
   phasesForScope,
   questionsForScope,
   CONFIG_META,
+  groupIdFor,
+  type FirstVisitQuestion,
 } from '../questions';
 
 describe('first-visit question config', () => {
@@ -35,5 +37,30 @@ describe('first-visit question config', () => {
       const fromPhases = phasesForScope(scope).flatMap((p) => p.questions);
       expect(flat.length).toBe(fromPhases.length);
     }
+  });
+
+  it('groupIdFor returns the question group_id, or null when absent', () => {
+    const base: FirstVisitQuestion = {
+      slug: 'x',
+      label: 'X',
+      description: null,
+      scope: 'deal',
+      mode: 'data',
+      type: 'text',
+      options: [],
+      required: false,
+      repeater: false,
+      pms_target: null,
+      status: 'existing',
+      verdict: null,
+      notes: null,
+      phase_id: 'p1',
+      phase_label: 'P1',
+    };
+    expect(groupIdFor(base)).toBeNull();
+    expect(groupIdFor({ ...base, group_id: 'checkin_step' })).toBe(
+      'checkin_step',
+    );
+    expect(groupIdFor({ ...base, group_id: null })).toBeNull();
   });
 });

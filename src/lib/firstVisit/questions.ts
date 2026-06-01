@@ -33,6 +33,12 @@ export type FirstVisitQuestion = {
   notes: string | null;
   phase_id: string;
   phase_label: string;
+  // Optional block-repeater group identifier. Questions that share a
+  // group_id render together inside a repeating block on the survey (e.g.
+  // "check-in step", "equipment issue"). Property does not exist on the
+  // generated JSON yet — WS-C will introduce it. Until then this is
+  // always undefined and groupIdFor() returns null.
+  group_id?: string | null;
 };
 
 export type FirstVisitPhase = {
@@ -225,4 +231,13 @@ export function questionsForScope(scope: HubScope): FirstVisitQuestion[] {
 // as that grouping. Centralised so write paths stay in sync with the config.
 export function areaKeyFor(q: FirstVisitQuestion): string {
   return q.phase_id;
+}
+
+// Returns the block-repeater group this question belongs to, or null when the
+// question is not part of a repeater. The `group_id` property is not yet
+// present on the generated JSON config — WS-C will add it — so this currently
+// always returns null in production. Callers can treat null as "single
+// instance, no step_index needed".
+export function groupIdFor(q: FirstVisitQuestion): string | null {
+  return q.group_id ?? null;
 }

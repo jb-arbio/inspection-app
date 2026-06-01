@@ -25,7 +25,16 @@ export function createHandlers(): JobHandlers {
       // simply succeeds and is dropped from the outbox.
     },
     answer_upsert: async (p) => {
-      await postJSON('/api/first-visit/answers', p);
+      // Only forward step_index when it is meaningfully set (non-null /
+      // non-undefined). Keeping the wire payload minimal means existing
+      // single-instance answers don't gain a noisy null column over the
+      // network and the API route can still accept the field when present.
+      const src = p as Record<string, unknown>;
+      const body: Record<string, unknown> = { ...src };
+      if (src.step_index === null || src.step_index === undefined) {
+        delete body.step_index;
+      }
+      await postJSON('/api/first-visit/answers', body);
       const a = p as { id: string };
       await localDb.answers.update(a.id, { synced_at: new Date().toISOString() });
     },

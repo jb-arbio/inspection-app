@@ -36,6 +36,11 @@ export type LocalAnswer = {
   unit_category_id?: string;
   question_key: string;
   area_key: string;
+  // Block-repeater coordinate. When a question belongs to a UI group that the
+  // inspector can instantiate multiple times (check-in steps, equipment
+  // issues, etc.), step_index disambiguates the rows. Single-instance
+  // questions leave it null/undefined. Added in Dexie v3 for Refactor Phase 2.
+  step_index?: number | null;
   value: unknown;
   notes?: string;
   data_point_slug?: string;
@@ -102,6 +107,23 @@ class FirstVisitDexie extends Dexie {
       targets: 'id, inspection_id, parent_id, kind',
       answers:
         'id, inspection_id, target_id, [target_id+question_key+area_key], synced_at',
+      media: 'id, inspection_id, target_id, answer_id, verified_at',
+      outbox: '++id, kind, created_at',
+    });
+    // v3 — block-repeater coordinate `step_index` on answers.
+    // We KEEP the v2 compound index [target_id+question_key+area_key] so the
+    // existing UnitSurvey lookups (and the answers-by-key map keyed on
+    // `${target_id}::${area_key}::${question_key}`) continue to work without
+    // changes. A SECOND compound index that includes step_index is added so
+    // repeater-aware queries (per-group, per-step) can be answered without a
+    // full scan. Existing rows have step_index === undefined; Dexie treats
+    // them as absent from the new index, which is what we want — they are
+    // single-instance answers.
+    this.version(3).stores({
+      inspections: 'id, deal_id, status, synced_at',
+      targets: 'id, inspection_id, parent_id, kind',
+      answers:
+        'id, inspection_id, target_id, [target_id+question_key+area_key], [target_id+area_key+question_key+step_index], synced_at',
       media: 'id, inspection_id, target_id, answer_id, verified_at',
       outbox: '++id, kind, created_at',
     });
