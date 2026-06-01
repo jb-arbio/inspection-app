@@ -4,9 +4,9 @@
   "source_file": "first-visit-survey-team-walkthrough-2026-05-28.xlsx",
   "counts": {
     "phases": 18,
-    "questions": 167,
-    "existing": 147,
-    "proposed": 20,
+    "questions": 186,
+    "existing": 140,
+    "proposed": 46,
     "with_verdict": 0
   },
   "phases": [
@@ -614,7 +614,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "3",
-          "phase_label": "Building exterior & parking"
+          "phase_label": "Building exterior & parking",
+          "multi_select": true
         },
         {
           "slug": "fv_building_state",
@@ -698,7 +699,13 @@
           "verdict": null,
           "notes": null,
           "phase_id": "3",
-          "phase_label": "Building exterior & parking"
+          "phase_label": "Building exterior & parking",
+          "follow_up": {
+            "when_value": true,
+            "label": "What's the construction and when does it end?",
+            "type": "text",
+            "required": false
+          }
         },
         {
           "slug": "fv_accessibility_step_free_entry",
@@ -779,29 +786,6 @@
       "label": "Building access & check-in",
       "questions": [
         {
-          "slug": "fv_checkin_steps_count",
-          "label": "Number of check-in steps",
-          "description": "Typically 1-3",
-          "scope": "location",
-          "mode": "measure",
-          "type": "select",
-          "options": [
-            "1",
-            "2",
-            "3",
-            "4",
-            "5"
-          ],
-          "required": true,
-          "repeater": false,
-          "pms_target": "(derivable from accessInfo.checkInSteps length)",
-          "status": "existing",
-          "verdict": null,
-          "notes": null,
-          "phase_id": "4",
-          "phase_label": "Building access & check-in"
-        },
-        {
           "slug": "fv_checkin_complexity",
           "label": "Check-in complexity overall",
           "description": null,
@@ -857,7 +841,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_access_point",
@@ -879,7 +864,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_lock_type",
@@ -903,7 +889,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_smart_lock_provider",
@@ -927,7 +914,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_smart_lock_device_id",
@@ -944,7 +932,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_lock_brand",
@@ -961,7 +950,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_lock_classification",
@@ -981,7 +971,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_key_storage_method",
@@ -1002,7 +993,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_storage_brand",
@@ -1019,7 +1011,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_default_access_code",
@@ -1036,7 +1029,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_step_lock_notes",
@@ -1053,7 +1047,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "4",
-          "phase_label": "Building access & check-in"
+          "phase_label": "Building access & check-in",
+          "group_id": "checkin_step"
         },
         {
           "slug": "fv_checkin_notes_overall",
@@ -1240,7 +1235,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & utilities",
+          "multi_select": true
         },
         {
           "slug": "fv_trash_pickup_schedule",
@@ -1399,7 +1395,13 @@
           "verdict": null,
           "notes": null,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities (fire safety)"
+          "phase_label": "Building infrastructure & utilities (fire safety)",
+          "follow_up": {
+            "when_value": true,
+            "label": "Where / how is it accessible?",
+            "type": "text",
+            "required": true
+          }
         },
         {
           "slug": "fv_fire_safety_concerns",
@@ -1463,7 +1465,9 @@
           "verdict": null,
           "notes": null,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & utilities",
+          "multi_select": true,
+          "allow_custom_options": true
         },
         {
           "slug": "fv_fusebox_location",
@@ -1602,8 +1606,8 @@
           "phase_label": "Building infrastructure & utilities"
         },
         {
-          "slug": "fv_utility_provider",
-          "label": "Utility providers",
+          "slug": "utility.type",
+          "label": "Utility type",
           "description": "One entry per utility company. Visitor asks Hausmeister/property manager for emergency contacts (Vattenfall, Stadtwerke, etc.).",
           "scope": "location",
           "mode": "data",
@@ -1614,18 +1618,73 @@
             "Gas",
             "Internet"
           ],
-          "required": false,
+          "required": true,
           "repeater": false,
-          "pms_target": "propertyManagement.utilityProviders[]",
+          "pms_target": "propertyManagement.utilityProviders[].type",
           "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "utility_provider"
         },
         {
-          "slug": "fv_maintenance_procedure",
-          "label": "Maintenance procedures",
+          "slug": "utility.provider_name",
+          "label": "Provider name",
+          "description": null,
+          "scope": "location",
+          "mode": "data",
+          "type": "text",
+          "options": [],
+          "required": true,
+          "repeater": false,
+          "pms_target": "propertyManagement.utilityProviders[].providerName",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "utility_provider"
+        },
+        {
+          "slug": "utility.account_number",
+          "label": "Account number",
+          "description": null,
+          "scope": "location",
+          "mode": "data",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyManagement.utilityProviders[].accountNumber [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "utility_provider"
+        },
+        {
+          "slug": "utility.emergency_contact",
+          "label": "Emergency contact",
+          "description": null,
+          "scope": "location",
+          "mode": "data",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyManagement.utilityProviders[].emergencyContact [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "utility_provider"
+        },
+        {
+          "slug": "maintenance.category",
+          "label": "Procedure category",
           "description": "One entry per staff-facing procedure (e.g. Bathroom ventilation, Fire alarm response, No electricity response). Visitor documents observed steps with photos / video.",
           "scope": "location",
           "mode": "data",
@@ -1637,14 +1696,69 @@
             "Appliance",
             "Other"
           ],
-          "required": false,
+          "required": true,
           "repeater": false,
-          "pms_target": "maintenancePlaybook[]",
+          "pms_target": "maintenancePlaybook[].category",
           "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "maintenance_procedure"
+        },
+        {
+          "slug": "maintenance.title",
+          "label": "Procedure title",
+          "description": null,
+          "scope": "location",
+          "mode": "data",
+          "type": "text",
+          "options": [],
+          "required": true,
+          "repeater": false,
+          "pms_target": "maintenancePlaybook[].title",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "maintenance_procedure"
+        },
+        {
+          "slug": "maintenance.steps",
+          "label": "Steps observed",
+          "description": null,
+          "scope": "location",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "maintenancePlaybook[].steps",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "maintenance_procedure"
+        },
+        {
+          "slug": "maintenance.photo",
+          "label": "Procedure photo",
+          "description": null,
+          "scope": "location",
+          "mode": "data",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "maintenancePlaybook[].photoUrl [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & utilities",
+          "group_id": "maintenance_procedure"
         }
       ]
     },
@@ -1810,24 +1924,13 @@
           "verdict": null,
           "notes": null,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
-        },
-        {
-          "slug": "fv_extra_services_booking_method",
-          "label": "Booking method per service",
-          "description": "Per service",
-          "scope": "location",
-          "mode": "data",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "repeater": false,
-          "pms_target": "ExtraService.bookingMethod  [proposed]",
-          "status": "existing",
-          "verdict": null,
-          "notes": null,
-          "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Building services & operational model",
+          "multi_select": true,
+          "per_option_follow_up": {
+            "label_template": "How can guests book ‚{option}'?",
+            "type": "text",
+            "required": false
+          }
         },
         {
           "slug": "fv_service_restrictions_observed",
@@ -1878,7 +1981,9 @@
           "verdict": null,
           "notes": null,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Building services & operational model",
+          "multi_select": true,
+          "allow_custom_options": true
         }
       ]
     },
@@ -2362,7 +2467,7 @@
         {
           "slug": "fv_furniture_cost_estimate_eur",
           "label": "Estimated furniture replacement cost (EUR)",
-          "description": null,
+          "description": "Auto-summed from issue blocks below — read-only after refactor.",
           "scope": "unit_category",
           "mode": "measure",
           "type": "number",
@@ -2400,7 +2505,7 @@
         {
           "slug": "fv_equipment_cost_estimate_eur",
           "label": "Estimated equipment cost per apartment (EUR)",
-          "description": null,
+          "description": "Auto-summed from issue blocks below — read-only after refactor.",
           "scope": "unit_category",
           "mode": "measure",
           "type": "number",
@@ -2503,7 +2608,7 @@
         {
           "slug": "fv_maintenance_cost_estimate_eur",
           "label": "Estimated total maintenance cost (EUR)",
-          "description": null,
+          "description": "Auto-summed from issue blocks below — read-only after refactor.",
           "scope": "unit_category",
           "mode": "measure",
           "type": "number",
@@ -2520,7 +2625,7 @@
         {
           "slug": "fv_maintenance_details",
           "label": "Maintenance details",
-          "description": "Required if maintenance > None",
+          "description": "Auto-summed from issue blocks below — read-only after refactor.",
           "scope": "unit_category",
           "mode": "data",
           "type": "text",
@@ -2533,6 +2638,239 @@
           "notes": null,
           "phase_id": "9d",
           "phase_label": "Unit walkthrough (condition)"
+        },
+        {
+          "slug": "furniture_issue.photo",
+          "label": "Furniture issue photo",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "data",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.furnitureIssues[].photoUrl [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "furniture_issue"
+        },
+        {
+          "slug": "furniture_issue.type",
+          "label": "Furniture issue type",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "select",
+          "options": [
+            "Missing",
+            "Damaged",
+            "Worn",
+            "Wrong size",
+            "Other"
+          ],
+          "required": true,
+          "repeater": false,
+          "pms_target": "propertyAssessment.furnitureIssues[].type [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "furniture_issue"
+        },
+        {
+          "slug": "furniture_issue.description",
+          "label": "Furniture issue description",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.furnitureIssues[].description [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "furniture_issue"
+        },
+        {
+          "slug": "furniture_issue.cost_eur",
+          "label": "Estimated cost (EUR)",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "measure",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.furnitureIssues[].costEur [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "furniture_issue"
+        },
+        {
+          "slug": "equipment_issue.photo",
+          "label": "Equipment issue photo",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "data",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.equipmentIssues[].photoUrl [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "equipment_issue"
+        },
+        {
+          "slug": "equipment_issue.type",
+          "label": "Equipment issue type",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "select",
+          "options": [
+            "Missing",
+            "Broken",
+            "Outdated",
+            "Other"
+          ],
+          "required": true,
+          "repeater": false,
+          "pms_target": "propertyAssessment.equipmentIssues[].type [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "equipment_issue"
+        },
+        {
+          "slug": "equipment_issue.description",
+          "label": "Equipment issue description",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.equipmentIssues[].description [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "equipment_issue"
+        },
+        {
+          "slug": "equipment_issue.cost_eur",
+          "label": "Estimated cost (EUR)",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "measure",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.equipmentIssues[].costEur [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "equipment_issue"
+        },
+        {
+          "slug": "maintenance_issue.photo",
+          "label": "Maintenance issue photo",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "data",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.maintenanceIssues[].photoUrl [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "maintenance_issue"
+        },
+        {
+          "slug": "maintenance_issue.type",
+          "label": "Maintenance issue type",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "select",
+          "options": [
+            "Plumbing",
+            "Electrical",
+            "HVAC",
+            "Structural",
+            "Other"
+          ],
+          "required": true,
+          "repeater": false,
+          "pms_target": "propertyAssessment.maintenanceIssues[].type [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "maintenance_issue"
+        },
+        {
+          "slug": "maintenance_issue.description",
+          "label": "Maintenance issue description",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.maintenanceIssues[].description [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "maintenance_issue"
+        },
+        {
+          "slug": "maintenance_issue.cost_eur",
+          "label": "Estimated cost (EUR)",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "measure",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "propertyAssessment.maintenanceIssues[].costEur [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9d",
+          "phase_label": "Unit walkthrough (condition)",
+          "group_id": "maintenance_issue"
         }
       ]
     },
@@ -2540,23 +2878,6 @@
       "id": "9e",
       "label": "Unit appliances & amenities (repeater)",
       "questions": [
-        {
-          "slug": "(repeater header)",
-          "label": "Appliances & amenities",
-          "description": "One entry per appliance/amenity. Form starts with up to 13 pre-populated item names (optional — could also start empty): Washing machine, Heating, Air conditioning, Dishwasher, TV / Smart TV, Stove / oven, Coffee machine, Iron + ironing board, Vacuum cleaner, Hairdryer, First-aid kit, Cleaning supplies, plus an 'Other' free row. NO other pre-fill — sub-fields below are blank for visitor to fill. Visitor can remove, edit, or add items. Each entry maps to one row in PMS equipmentAndAmenities[].",
-          "scope": "unit_category",
-          "mode": "data",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "repeater": false,
-          "pms_target": "equipmentAndAmenities[]",
-          "status": "existing",
-          "verdict": null,
-          "notes": null,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
-        },
         {
           "slug": "appliance.name",
           "label": "Item name",
@@ -2572,7 +2893,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.kind",
@@ -2593,7 +2915,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.brand",
@@ -2610,7 +2933,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.location",
@@ -2627,7 +2951,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.instructions",
@@ -2644,7 +2969,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.availabilityType",
@@ -2666,7 +2992,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.status",
@@ -2689,7 +3016,8 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
           "slug": "appliance.statusNote",
@@ -2706,27 +3034,26 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         },
         {
-          "slug": "appliance.videoNeeded",
-          "label": "Video needed? (audit)",
-          "description": "Internal flag: does ops need to record a how-to-use video for this item? Audit/workflow signal; no PMS field — hub-only.",
+          "slug": "appliance.video",
+          "label": "How-to-use video",
+          "description": "Upload a short video of how the appliance works (replaces the previous Y/N video-needed flag).",
           "scope": "unit_category",
           "mode": "data",
-          "type": "boolean",
-          "options": [
-            "Yes",
-            "No"
-          ],
+          "type": "file",
+          "options": [],
           "required": false,
           "repeater": false,
-          "pms_target": "(hub-only — workflow flag)",
-          "status": "existing",
+          "pms_target": "equipmentAndAmenities.videoUrl [proposed]",
+          "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_label": "Unit appliances & amenities (repeater)",
+          "group_id": "appliance_amenity"
         }
       ]
     },
@@ -2901,27 +3228,13 @@
       "label": "Unit amenities & details",
       "questions": [
         {
-          "slug": "fv_consumables_provided",
-          "label": "Consumables provided",
-          "description": null,
+          "slug": "consumable.name",
+          "label": "Consumable name",
+          "description": "Auto-populated from picker (Welle 4) but editable.",
           "scope": "unit_category",
           "mode": "data",
-          "type": "select",
-          "options": [
-            "Coffee",
-            "Tea",
-            "Sugar",
-            "S&P",
-            "Oil",
-            "Shower gel",
-            "Shampoo",
-            "Dish soap",
-            "Tabs",
-            "TP",
-            "Kitchen towel",
-            "Sponge",
-            "None"
-          ],
+          "type": "text",
+          "options": [],
           "required": true,
           "repeater": false,
           "pms_target": "equipmentAndAmenities.name",
@@ -2929,27 +3242,66 @@
           "verdict": null,
           "notes": null,
           "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
+          "phase_label": "Unit amenities & details",
+          "group_id": "consumable"
         },
         {
-          "slug": "fv_consumables_meet_standard",
-          "label": "Consumables meet Arbio standard?",
+          "slug": "consumable.meets_standard",
+          "label": "Meets Arbio standard?",
           "description": null,
           "scope": "unit_category",
           "mode": "observe",
           "type": "select",
           "options": [
             "Yes",
-            "No-needs additions"
+            "Needs additions",
+            "N/A"
           ],
-          "required": true,
+          "required": false,
           "repeater": false,
-          "pms_target": "propertyAssessment.consumablesMeetStandard  [proposed]",
-          "status": "existing",
+          "pms_target": "propertyAssessment.consumableMeetsStandard[item] [proposed GAP]",
+          "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
+          "phase_label": "Unit amenities & details",
+          "group_id": "consumable"
+        },
+        {
+          "slug": "consumable.notes",
+          "label": "Notes",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "equipmentAndAmenities.notes",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9g",
+          "phase_label": "Unit amenities & details",
+          "group_id": "consumable"
+        },
+        {
+          "slug": "consumable.photo",
+          "label": "Consumable photo",
+          "description": null,
+          "scope": "unit_category",
+          "mode": "data",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "equipmentAndAmenities.photoUrl [proposed]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "9g",
+          "phase_label": "Unit amenities & details",
+          "group_id": "consumable"
         },
         {
           "slug": "fv_blackout_curtains",
@@ -3158,21 +3510,40 @@
           "phase_label": "Check-out arrangements"
         },
         {
-          "slug": "fv_checkout_property_specific_steps",
-          "label": "Property-specific check-out steps",
-          "description": "Skip if none",
+          "slug": "fv_checkout_step_name",
+          "label": "Check-out step name",
+          "description": "One entry per property-specific check-out step. Skip the block if none.",
           "scope": "location",
           "mode": "data",
           "type": "text",
           "options": [],
           "required": false,
           "repeater": false,
-          "pms_target": "houseRules.checkOutInstructions.description",
-          "status": "existing",
+          "pms_target": "houseRules.checkOutInstructions.steps[].name [proposed] [GAP]",
+          "status": "proposed",
           "verdict": null,
           "notes": null,
           "phase_id": "10",
-          "phase_label": "Check-out arrangements"
+          "phase_label": "Check-out arrangements",
+          "group_id": "checkout_step"
+        },
+        {
+          "slug": "fv_checkout_step_notes",
+          "label": "Check-out step notes",
+          "description": null,
+          "scope": "location",
+          "mode": "observe",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "repeater": false,
+          "pms_target": "houseRules.checkOutInstructions.steps[].notes [proposed] [GAP]",
+          "status": "proposed",
+          "verdict": null,
+          "notes": null,
+          "phase_id": "10",
+          "phase_label": "Check-out arrangements",
+          "group_id": "checkout_step"
         },
         {
           "slug": "fv_checkout_time",

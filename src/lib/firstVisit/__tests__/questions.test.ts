@@ -39,6 +39,46 @@ describe('first-visit question config', () => {
     }
   });
 
+  it('WS-C: check-in step questions all share group_id "checkin_step"', () => {
+    const checkinStepSlugs = [
+      'fv_step_name',
+      'fv_step_access_point',
+      'fv_step_lock_type',
+      'fv_step_smart_lock_provider',
+      'fv_step_smart_lock_device_id',
+      'fv_step_lock_brand',
+      'fv_step_lock_classification',
+      'fv_step_key_storage_method',
+      'fv_step_storage_brand',
+      'fv_step_default_access_code',
+      'fv_step_lock_notes',
+    ];
+    for (const slug of checkinStepSlugs) {
+      const q = ALL_QUESTIONS.find((x) => x.slug === slug);
+      expect(q, `missing question ${slug}`).toBeDefined();
+      expect(q!.group_id).toBe('checkin_step');
+    }
+  });
+
+  it('WS-C: fv_checkin_steps_count is removed', () => {
+    expect(ALL_QUESTIONS.find((q) => q.slug === 'fv_checkin_steps_count')).toBeUndefined();
+  });
+
+  it('WS-C: fv_extra_services_offered is a multi-select with per-option follow-up', () => {
+    const q = ALL_QUESTIONS.find((x) => x.slug === 'fv_extra_services_offered');
+    expect(q).toBeDefined();
+    expect(q!.multi_select).toBe(true);
+    expect(q!.per_option_follow_up).toBeDefined();
+    expect(q!.per_option_follow_up!.label_template).toContain('{option}');
+  });
+
+  it('WS-C: fv_fire_exit_secondary has a conditional follow-up triggered by Yes', () => {
+    const q = ALL_QUESTIONS.find((x) => x.slug === 'fv_fire_exit_secondary');
+    expect(q).toBeDefined();
+    expect(q!.follow_up).toBeDefined();
+    expect(q!.follow_up!.when_value).toBe(true);
+  });
+
   it('groupIdFor returns the question group_id, or null when absent', () => {
     const base: FirstVisitQuestion = {
       slug: 'x',
