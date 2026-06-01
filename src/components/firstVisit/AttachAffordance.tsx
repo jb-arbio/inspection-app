@@ -90,6 +90,7 @@ export function AttachAffordance({
     return (
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => setOpen(true)}
         className="self-start text-[11px] text-gray-400 underline-offset-2 hover:text-gray-700 hover:underline"
       >
@@ -106,6 +107,7 @@ export function AttachAffordance({
         </span>
         <button
           type="button"
+          tabIndex={-1}
           onClick={() => setOpen((v) => !v)}
           className="text-[11px] text-gray-400 hover:text-gray-700"
         >
@@ -127,6 +129,7 @@ export function AttachAffordance({
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => setShowNote((v) => !v)}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs hover:bg-gray-100"
             >
@@ -134,6 +137,7 @@ export function AttachAffordance({
             </button>
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => photoRef.current?.click()}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs hover:bg-gray-100"
             >
@@ -141,6 +145,7 @@ export function AttachAffordance({
             </button>
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => videoRef.current?.click()}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs hover:bg-gray-100"
             >
@@ -148,6 +153,7 @@ export function AttachAffordance({
             </button>
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => photoUploadRef.current?.click()}
               title="Upload photo from device"
               className="rounded p-2 text-xs text-gray-400 hover:text-gray-700"
@@ -156,6 +162,7 @@ export function AttachAffordance({
             </button>
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => videoUploadRef.current?.click()}
               title="Upload video from device"
               className="rounded p-2 text-xs text-gray-400 hover:text-gray-700"

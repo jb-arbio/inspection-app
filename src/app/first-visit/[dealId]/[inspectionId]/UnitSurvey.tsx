@@ -262,6 +262,7 @@ export function UnitSurvey({
       <main className="mx-auto max-w-md p-6">
         <button
           onClick={onBack}
+          tabIndex={-1}
           className="mb-3 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"
         >
           ← Back to visit
@@ -282,6 +283,7 @@ export function UnitSurvey({
     <main className="mx-auto max-w-md p-6 pb-24">
       <button
         onClick={onBack}
+        tabIndex={-1}
         className="mb-1 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"
       >
         ← Back to visit
@@ -336,6 +338,7 @@ export function UnitSurvey({
                 key={p.id}
                 ref={active ? activeChipRef : undefined}
                 onClick={() => setCurrentIdx(i)}
+                tabIndex={-1}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
                   active
                     ? 'bg-black text-white'
@@ -457,6 +460,7 @@ export function UnitSurvey({
         ) : (
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setCurrentIdx(nextIncompletePhaseIdx)}
             className="text-xs text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
           >
@@ -468,6 +472,7 @@ export function UnitSurvey({
       <div className="mt-2 flex items-center justify-between gap-2">
         <button
           type="button"
+          tabIndex={-1}
           onClick={() => !isFirst && setCurrentIdx((i) => i - 1)}
           disabled={isFirst}
           className="rounded-md border border-gray-300 px-4 py-2 text-sm disabled:opacity-40"
@@ -480,6 +485,7 @@ export function UnitSurvey({
         {isLast ? (
           <button
             type="button"
+            tabIndex={-1}
             onClick={onBack}
             className="rounded-md bg-black px-4 py-2 text-sm text-white"
           >
@@ -488,6 +494,7 @@ export function UnitSurvey({
         ) : (
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setCurrentIdx((i) => i + 1)}
             className="rounded-md bg-black px-4 py-2 text-sm text-white"
           >

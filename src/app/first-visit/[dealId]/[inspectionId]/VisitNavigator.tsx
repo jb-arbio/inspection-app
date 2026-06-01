@@ -390,12 +390,14 @@ export default function VisitNavigator({
         <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
           <Link
             href="/first-visit/new"
+            tabIndex={-1}
             className="inline-flex items-center gap-1 hover:text-gray-900"
           >
             <span aria-hidden>←</span> Pick another deal
           </Link>
           <Link
             href="/first-visit"
+            tabIndex={-1}
             aria-label="Home"
             title="Home — my visits"
             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -437,12 +439,14 @@ export default function VisitNavigator({
             <button
               onClick={syncNow}
               disabled={syncing}
+              tabIndex={-1}
               className="rounded border border-gray-300 px-2 py-0.5 disabled:opacity-50"
             >
               Sync now
             </button>
             <button
               onClick={() => downloadInspectionZip(inspectionId)}
+              tabIndex={-1}
               className="rounded border border-gray-300 px-2 py-0.5"
             >
               Export

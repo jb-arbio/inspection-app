@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
 import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRing';
 
@@ -101,6 +101,7 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
           </span>
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => onChange({ value: null, wasAcceptedAsIs: false })}
             className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-white"
           >
@@ -140,6 +141,7 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
           <span className="truncate text-yellow-900">{String(hubValue)}</span>
           <button
             type="button"
+            tabIndex={-1}
             className="ml-auto rounded-md bg-yellow-300 px-3 py-2 text-sm font-medium hover:bg-yellow-400 active:bg-yellow-500"
             onClick={() => {
               onChange({ value: hubValue, wasAcceptedAsIs: true });
@@ -163,13 +165,11 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
         />
       )}
       {question.type === 'text' && isLongText && (
-        <textarea
+        <AutoGrowTextarea
           id={id}
-          rows={3}
-          className="rounded-md border border-gray-300 px-3 py-2 text-base"
           value={value == null ? '' : String(value)}
-          onChange={(e) => {
-            onChange({ value: e.target.value, wasAcceptedAsIs: false });
+          onChange={(v) => {
+            onChange({ value: v, wasAcceptedAsIs: false });
             pulseDebounced();
           }}
         />
@@ -260,6 +260,38 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
   );
 }
 
+// Textarea that grows with its content. Inspector-friendly: long observations
+// stay visible without an inner scroll-trap. Min-height matches the old
+// rows={3} baseline; max-height is intentionally unset so the card simply
+// expands inside the surrounding flex column.
+function AutoGrowTextarea({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      id={id}
+      rows={3}
+      className="min-h-[5.25rem] resize-none overflow-hidden rounded-md border border-gray-300 px-3 py-2 text-base"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
 // type=repeater is a stub: the sub-form schema lands in a later session. For
 // now we let the inspector add free-text items so demos can still capture them.
 export function RepeaterStub({
@@ -299,6 +331,7 @@ export function RepeaterStub({
             />
             <button
               type="button"
+              tabIndex={-1}
               onClick={() => set(items.filter((_, j) => j !== i))}
               className="text-xs text-gray-400 hover:text-red-500"
             >
@@ -309,6 +342,7 @@ export function RepeaterStub({
       </ul>
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => set([...items, ''])}
         className="self-start rounded border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
       >

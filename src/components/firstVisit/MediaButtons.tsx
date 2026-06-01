@@ -76,6 +76,7 @@ function MediaRow({
     <div className="flex items-center gap-2">
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => captureRef.current?.click()}
         className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
       >
@@ -84,6 +85,7 @@ function MediaRow({
 
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => uploadRef.current?.click()}
         title={`Upload ${kind} from device`}
         aria-label={`Upload ${kind} from device`}

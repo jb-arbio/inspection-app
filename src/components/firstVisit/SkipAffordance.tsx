@@ -46,6 +46,7 @@ export function SkipAffordance({
     return (
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => setOpen(true)}
         className="self-start text-[11px] text-gray-400 underline-offset-2 hover:text-gray-700 hover:underline"
       >
@@ -62,6 +63,7 @@ export function SkipAffordance({
           <button
             key={r}
             type="button"
+            tabIndex={-1}
             onClick={() => skip(r)}
             className="rounded-full border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-100"
           >
@@ -78,6 +80,7 @@ export function SkipAffordance({
         />
         <button
           type="button"
+          tabIndex={-1}
           onClick={() => skip(reason)}
           disabled={!reason.trim()}
           className="rounded-md bg-black px-3 py-1 text-xs text-white disabled:opacity-40"
@@ -86,6 +89,7 @@ export function SkipAffordance({
         </button>
         <button
           type="button"
+          tabIndex={-1}
           onClick={() => {
             setOpen(false);
             setReason('');
