@@ -90,6 +90,63 @@ function stripOperationalDescriptions(phases: FirstVisitPhase[]): FirstVisitPhas
   }));
 }
 
+// Some XLSX rows describe data that lives on the `deals` table itself (stampings
+// like `deals.name`), not in the `data_points` model the survey reads from. They
+// render as empty fields and duplicate info already shown elsewhere in the UI
+// (e.g. the deal name is in the VisitNavigator header). Hide them entirely.
+// Slugs listed here are dropped from PHASES; phases that empty out are removed.
+const HIDDEN_DEAL_STAMPING_SLUGS = new Set<string>([
+  'fv_visit_deal_name',
+]);
+
+function hideDealStampingQuestions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
+  return phases
+    .map((p) => ({
+      ...p,
+      questions: p.questions.filter((q) => !HIDDEN_DEAL_STAMPING_SLUGS.has(q.slug)),
+    }))
+    .filter((p) => p.questions.length > 0);
+}
+
+// "verify" was a spec marker meaning "this is a data point the inspector should
+// confirm against pre-filled hub data". It leaked into user-facing labels,
+// phase labels, and descriptions. When nothing is pre-filled there is nothing
+// to "verify", so the word is just confusing on the phone. Strip it from
+// display strings only — slugs (DB keys like `fv_building_amenities_verify`)
+// are untouched.
+function cleanLabel(label: string): string {
+  if (!label) return label;
+  let out = label;
+  // " & verify" → "" (e.g. "Unit identity & verify" → "Unit identity")
+  out = out.replace(/\s*&\s*verify\b/gi, '');
+  // trailing " verify" → "" (e.g. "Building amenities verify" → "Building amenities")
+  out = out.replace(/\s+verify\s*$/gi, '');
+  // collapse double spaces + trim
+  out = out.replace(/\s{2,}/g, ' ').trim();
+  return out;
+}
+
+function cleanDescription(desc: string | null): string | null {
+  if (!desc) return desc;
+  // standalone "verify" → "confirm" (case-insensitive, lowercase replacement)
+  let out = desc.replace(/\bverify\b/gi, 'confirm');
+  out = out.replace(/\s{2,}/g, ' ').trim();
+  return out.length === 0 ? null : out;
+}
+
+function stripVerifyWord(phases: FirstVisitPhase[]): FirstVisitPhase[] {
+  return phases.map((p) => ({
+    ...p,
+    label: cleanLabel(p.label),
+    questions: p.questions.map((q) => ({
+      ...q,
+      label: cleanLabel(q.label),
+      description: cleanDescription(q.description),
+      phase_label: cleanLabel(q.phase_label),
+    })),
+  }));
+}
+
 // Defensive dedup: the XLSX-driven generator can emit the same slug twice within
 // a phase (content bug). Two rows sharing a slug would collide on the Dexie
 // compound key [target_id+question_key+area_key] and produce duplicate React
@@ -128,8 +185,8 @@ function dedupePhases(phases: FirstVisitPhase[]): FirstVisitPhase[] {
   });
 }
 
-export const PHASES: FirstVisitPhase[] = stripOperationalDescriptions(
-  dedupePhases(RAW.phases),
+export const PHASES: FirstVisitPhase[] = stripVerifyWord(
+  stripOperationalDescriptions(hideDealStampingQuestions(dedupePhases(RAW.phases))),
 );
 export const ALL_QUESTIONS: FirstVisitQuestion[] = PHASES.flatMap((p) => p.questions);
 
