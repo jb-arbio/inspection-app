@@ -276,3 +276,41 @@ export function areaKeyFor(q: FirstVisitQuestion): string {
 export function groupIdFor(q: FirstVisitQuestion): string | null {
   return q.group_id ?? null;
 }
+
+// WS-F media anchoring: photo/video file questions opt into rendering inline
+// underneath their related data question by setting `anchor_to: <slug>` in
+// the JSON config. The two helpers below let UnitSurvey pull anchored
+// questions out of their original phase and inline them under the anchor.
+//
+// `buildAnchorMap` collects file questions keyed by their anchor's slug.
+// `filterOutAnchored` removes anchored questions from their original phase
+// (only when the anchor target also exists in the same scope — orphans stay
+// put so they aren't silently dropped). Phases that empty out are removed,
+// matching `phasesForScope`'s behaviour.
+export function buildAnchorMap(
+  questions: FirstVisitQuestion[],
+): Map<string, FirstVisitQuestion[]> {
+  const all = new Set(questions.map((q) => q.slug));
+  const map = new Map<string, FirstVisitQuestion[]>();
+  for (const q of questions) {
+    const target = q.anchor_to;
+    if (!target) continue;
+    if (!all.has(target)) continue; // orphan — leave in place
+    const bucket = map.get(target);
+    if (bucket) bucket.push(q);
+    else map.set(target, [q]);
+  }
+  return map;
+}
+
+export function filterOutAnchored(
+  phases: FirstVisitPhase[],
+  anchoredSlugs: Set<string>,
+): FirstVisitPhase[] {
+  return phases
+    .map((p) => ({
+      ...p,
+      questions: p.questions.filter((q) => !anchoredSlugs.has(q.slug)),
+    }))
+    .filter((p) => p.questions.length > 0);
+}

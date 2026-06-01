@@ -4,6 +4,8 @@ import {
   phasesForScope,
   areaKeyFor,
   groupIdFor,
+  buildAnchorMap,
+  filterOutAnchored,
   type FirstVisitQuestion,
 } from '@/lib/firstVisit/questions';
 import { RepeaterStub } from '@/components/firstVisit/PrefilledField';
@@ -47,7 +49,25 @@ export function UnitSurvey({
   breadcrumb?: string[];
 }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
-  const phases = useMemo(() => phasesForScope(scope), [scope]);
+  // WS-F media anchoring: pull photo/video file-questions out of their own
+  // phase ("Property documentation", "Unit photos & videos") and inline them
+  // under their related data question. We build the map across the whole
+  // scope so an anchor in phase A can pull a file-question that was originally
+  // in phase B.
+  const phases = useMemo(() => {
+    const raw = phasesForScope(scope);
+    const allInScope = raw.flatMap((p) => p.questions);
+    const anchorMap = buildAnchorMap(allInScope);
+    const anchoredSlugs = new Set<string>();
+    for (const arr of anchorMap.values()) {
+      for (const q of arr) anchoredSlugs.add(q.slug);
+    }
+    return filterOutAnchored(raw, anchoredSlugs);
+  }, [scope]);
+  const anchorMap = useMemo(() => {
+    const allInScope = phasesForScope(scope).flatMap((p) => p.questions);
+    return buildAnchorMap(allInScope);
+  }, [scope]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
   const activeChipRef = useRef<HTMLButtonElement>(null);
@@ -251,25 +271,50 @@ export function UnitSurvey({
   const scopeId = resolveScopeId(scope, ctx) ?? undefined;
 
   // Progress across the whole scope: required answered / required total.
+  // Anchored file-questions render inside another phase but still count
+  // toward the anchor's phase progress (they no longer have a phase of their
+  // own once "Property documentation" / "Unit photos & videos" empty out).
+  const allAnchoredInScope = useMemo(
+    () => Array.from(anchorMap.values()).flat(),
+    [anchorMap],
+  );
   const requiredStats = useMemo(() => {
-    const required = phases.flatMap((p) => p.questions).filter((q) => q.required);
+    const inPhases = phases.flatMap((p) => p.questions);
+    const required = [...inPhases, ...allAnchoredInScope].filter((q) => q.required);
     const done = required.filter((q) => {
       const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
       return isAnswered(answers[key]?.value);
     }).length;
     return { done, total: required.length };
-  }, [phases, answers, target.id]);
+  }, [phases, allAnchoredInScope, answers, target.id]);
 
   // Index of the next phase that has a required, unanswered question, searching
   // from currentIdx + 1 forward, then wrapping to 0..currentIdx. Returns null
   // when every required question across all phases is already answered.
+  // Anchored file-questions are folded into their anchor's phase here so
+  // skipping forward considers them too.
+  const anchoredByAnchorPhase = useMemo(() => {
+    const m = new Map<string, FirstVisitQuestion[]>();
+    for (const p of phases) {
+      const list: FirstVisitQuestion[] = [];
+      for (const q of p.questions) {
+        const a = anchorMap.get(q.slug);
+        if (a) list.push(...a);
+      }
+      if (list.length > 0) m.set(p.id, list);
+    }
+    return m;
+  }, [phases, anchorMap]);
   const nextIncompletePhaseIdx = useMemo(() => {
-    const phaseHasIncomplete = (p: (typeof phases)[number]) =>
-      p.questions.some((q) => {
+    const phaseHasIncomplete = (p: (typeof phases)[number]) => {
+      const own = p.questions;
+      const anchored = anchoredByAnchorPhase.get(p.id) ?? [];
+      return [...own, ...anchored].some((q) => {
         if (!q.required) return false;
         const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
         return !isAnswered(answers[key]?.value);
       });
+    };
     for (let i = currentIdx + 1; i < phases.length; i++) {
       if (phaseHasIncomplete(phases[i])) return i;
     }
@@ -277,7 +322,7 @@ export function UnitSurvey({
       if (phaseHasIncomplete(phases[i])) return i;
     }
     return null;
-  }, [phases, answers, target.id, currentIdx]);
+  }, [phases, anchoredByAnchorPhase, answers, target.id, currentIdx]);
 
   if (phases.length === 0) {
     return (
@@ -348,7 +393,11 @@ export function UnitSurvey({
           {phases.map((p, i) => {
             const active = i === currentIdx;
             // Section completion dot: any required question done for this phase.
-            const reqInPhase = p.questions.filter((q) => q.required);
+            // Include anchored file-questions that render inside this phase.
+            const anchoredHere = anchoredByAnchorPhase.get(p.id) ?? [];
+            const reqInPhase = [...p.questions, ...anchoredHere].filter(
+              (q) => q.required,
+            );
             const doneInPhase = reqInPhase.filter((q) => {
               const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
               return isAnswered(answers[key]?.value);
@@ -374,7 +423,7 @@ export function UnitSurvey({
                     active ? 'text-white/70' : 'text-gray-400'
                   }`}
                 >
-                  {p.questions.length}
+                  {p.questions.length + anchoredHere.length}
                 </span>
                 {phaseComplete && (
                   <span
@@ -397,88 +446,137 @@ export function UnitSurvey({
         <div className="mt-2 flex flex-col gap-3">
           {buildRenderPlan(phase.questions).map((node) => {
             if (node.kind === 'group') {
+              // Anchored children for any question in the group are rendered
+              // after the group block (groups don't slice file-questions
+              // mid-block; the StepGroup owns its own layout).
+              const groupAnchored = node.questions.flatMap(
+                (gq) => anchorMap.get(gq.slug) ?? [],
+              );
               return (
-                <StepGroup
-                  key={`group-${node.groupId}`}
-                  groupId={node.groupId}
-                  questions={node.questions}
-                  inspectionId={inspectionId}
-                  targetId={target.id}
-                  areaKey={phase.id}
-                  hubValueLookup={(slug) =>
-                    snapshot ? lookupHubValue(snapshot, scopeId, slug) : undefined
-                  }
-                  answers={answers}
-                  onChange={onChange}
-                  setNotes={setNotes}
-                />
+                <div key={`group-${node.groupId}`} className="flex flex-col gap-3">
+                  <StepGroup
+                    groupId={node.groupId}
+                    questions={node.questions}
+                    inspectionId={inspectionId}
+                    targetId={target.id}
+                    areaKey={phase.id}
+                    hubValueLookup={(slug) =>
+                      snapshot ? lookupHubValue(snapshot, scopeId, slug) : undefined
+                    }
+                    answers={answers}
+                    onChange={onChange}
+                    setNotes={setNotes}
+                  />
+                  {groupAnchored.map((fq) =>
+                    renderAnchoredFile(fq, {
+                      inspectionId,
+                      targetId: target.id,
+                      areaKey: phase.id,
+                      answers,
+                      setNotes,
+                    }),
+                  )}
+                </div>
               );
             }
 
             const q = node.question;
             const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
             const answer = answers[key];
+            const anchored = anchorMap.get(q.slug) ?? [];
 
             if (q.type === 'repeater') {
               return (
-                <div key={key} className="flex flex-col gap-1">
-                  <RepeaterStub
-                    question={q}
-                    value={answer?.value}
-                    onChange={(c) => onChange(q, c)}
-                  />
-                  <AttachAffordance
-                    inspectionId={inspectionId}
-                    targetId={target.id}
-                    areaKey={phase.id}
-                    questionKey={q.slug}
-                    answerId={answer?.id}
-                    notes={answer?.notes}
-                    onNotesChange={(n) => setNotes(q, n)}
-                  />
+                <div key={key} className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <RepeaterStub
+                      question={q}
+                      value={answer?.value}
+                      onChange={(c) => onChange(q, c)}
+                    />
+                    <AttachAffordance
+                      inspectionId={inspectionId}
+                      targetId={target.id}
+                      areaKey={phase.id}
+                      questionKey={q.slug}
+                      answerId={answer?.id}
+                      notes={answer?.notes}
+                      onNotesChange={(n) => setNotes(q, n)}
+                    />
+                  </div>
+                  {anchored.map((fq) =>
+                    renderAnchoredFile(fq, {
+                      inspectionId,
+                      targetId: target.id,
+                      areaKey: phase.id,
+                      answers,
+                      setNotes,
+                    }),
+                  )}
                 </div>
               );
             }
 
             if (q.type === 'file') {
               return (
-                <div key={key} className="flex flex-col gap-1">
-                  <MediaButtons
-                    inspectionId={inspectionId}
-                    targetId={target.id}
-                    areaKey={phase.id}
-                    questionKey={q.slug}
-                    answerId={answer?.id}
-                    label={q.label}
-                    description={q.description}
-                    required={q.required}
-                  />
-                  <AttachAffordance
-                    inspectionId={inspectionId}
-                    targetId={target.id}
-                    areaKey={phase.id}
-                    questionKey={q.slug}
-                    answerId={answer?.id}
-                    notes={answer?.notes}
-                    onNotesChange={(n) => setNotes(q, n)}
-                  />
+                <div key={key} className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <MediaButtons
+                      inspectionId={inspectionId}
+                      targetId={target.id}
+                      areaKey={phase.id}
+                      questionKey={q.slug}
+                      answerId={answer?.id}
+                      label={q.label}
+                      description={q.description}
+                      required={q.required}
+                    />
+                    <AttachAffordance
+                      inspectionId={inspectionId}
+                      targetId={target.id}
+                      areaKey={phase.id}
+                      questionKey={q.slug}
+                      answerId={answer?.id}
+                      notes={answer?.notes}
+                      onNotesChange={(n) => setNotes(q, n)}
+                    />
+                  </div>
+                  {anchored.map((fq) =>
+                    renderAnchoredFile(fq, {
+                      inspectionId,
+                      targetId: target.id,
+                      areaKey: phase.id,
+                      answers,
+                      setNotes,
+                    }),
+                  )}
                 </div>
               );
             }
 
             return (
-              <QuestionRow
-                key={key}
-                question={q}
-                inspectionId={inspectionId}
-                targetId={target.id}
-                areaKey={phase.id}
-                stepIndex={null}
-                hubValue={snapshot ? lookupHubValue(snapshot, scopeId, q.slug) : undefined}
-                answers={answers}
-                onChange={onChange}
-                setNotes={setNotes}
-              />
+              <div key={key} className="flex flex-col gap-3">
+                <QuestionRow
+                  question={q}
+                  inspectionId={inspectionId}
+                  targetId={target.id}
+                  areaKey={phase.id}
+                  stepIndex={null}
+                  hubValue={snapshot ? lookupHubValue(snapshot, scopeId, q.slug) : undefined}
+                  answers={answers}
+                  onChange={onChange}
+                  setNotes={setNotes}
+                />
+                {anchored.map((fq) =>
+                  renderAnchoredFile(fq, {
+                    inspectionId,
+                    targetId: target.id,
+                    areaKey: phase.id,
+                    answers,
+                    setNotes,
+                  }),
+                )}
+              </div>
             );
           })}
         </div>
@@ -533,6 +631,58 @@ export function UnitSurvey({
         )}
       </div>
     </main>
+  );
+}
+
+// Render an anchored file question inline beneath its anchor (WS-F). The
+// rendering matches the standalone file-question branch in the main loop —
+// MediaButtons + AttachAffordance — but is keyed off the anchored question's
+// own slug so its answers are stored independently of the anchor.
+function renderAnchoredFile(
+  fq: FirstVisitQuestion,
+  args: {
+    inspectionId: string;
+    targetId: string;
+    /** Unused — anchored questions keep their original area_key (phase_id)
+     *  so answer storage doesn't shift just because they render elsewhere. */
+    areaKey: string;
+    answers: Record<string, LocalAnswer>;
+    setNotes: (q: FirstVisitQuestion, nextNotes: string, stepIndex?: number | null) => void;
+  },
+) {
+  const { inspectionId, targetId, answers, setNotes } = args;
+  // Anchored file-questions keep their original area_key. The visual location
+  // moves; the storage coordinate doesn't. This means existing media (if any)
+  // is preserved across the WS-F render change.
+  const ownAreaKey = areaKeyFor(fq);
+  const key = `${targetId}::${ownAreaKey}::${fq.slug}`;
+  const answer = answers[key];
+  return (
+    <div
+      key={`anchored-${fq.slug}`}
+      data-anchored-to={fq.anchor_to}
+      className="ml-3 flex flex-col gap-1 border-l-2 border-gray-100 pl-3"
+    >
+      <MediaButtons
+        inspectionId={inspectionId}
+        targetId={targetId}
+        areaKey={ownAreaKey}
+        questionKey={fq.slug}
+        answerId={answer?.id}
+        label={fq.label}
+        description={fq.description}
+        required={fq.required}
+      />
+      <AttachAffordance
+        inspectionId={inspectionId}
+        targetId={targetId}
+        areaKey={ownAreaKey}
+        questionKey={fq.slug}
+        answerId={answer?.id}
+        notes={answer?.notes}
+        onNotesChange={(n) => setNotes(fq, n)}
+      />
+    </div>
   );
 }
 
