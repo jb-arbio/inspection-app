@@ -28,4 +28,17 @@ describe('Phase A — dropped questions', () => {
     expect(reset.length).toBe(1);
     expect(reset[0].status).toBe('existing');
   });
+
+  // Phase C: per-area condition ratings stay as pure observations (they feed the
+  // health score). Only the cost fields were removed — the € total is now derived
+  // from the Findings repeater. This guard prevents an accidental future drop.
+  it('keeps the per-area condition ratings (no longer cost-bearing)', () => {
+    const present = new Set(ALL_QUESTIONS.map((q) => q.slug));
+    for (const slug of [
+      'fv_furniture_status', 'fv_equipment_status', 'fv_bathroom_condition',
+      'fv_bathroom_issues', 'fv_maintenance_level',
+    ]) {
+      expect(present.has(slug), `${slug} kept`).toBe(true);
+    }
+  });
 });
