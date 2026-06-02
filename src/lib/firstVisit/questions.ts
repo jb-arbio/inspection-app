@@ -316,9 +316,156 @@ function injectFindings(phases: FirstVisitPhase[]): FirstVisitPhase[] {
   });
 }
 
+// --- Phase E: Bucket-2 config fixes (review 2026-06-02) ---
+// Two generic helpers drive all eight changes so we don't write a bespoke
+// transform per fix:
+//   overrideQuestions   — shallow-merge a Partial<FirstVisitQuestion> patch
+//                         into every question whose slug matches.
+//   injectBucket2Questions — append brand-new questions to a specific phase
+//                         (same pattern as injectFindings).
+
+// Shallow-merge `patchMap[slug]` into each matching question across all phases.
+// Slugs in the map that match no question are silently no-ops (reported in the
+// Phase E summary, not enforced here — keeps the helper generic).
+export function overrideQuestions(
+  phases: FirstVisitPhase[],
+  patchMap: Record<string, Partial<FirstVisitQuestion>>,
+): FirstVisitPhase[] {
+  return phases.map((p) => ({
+    ...p,
+    questions: p.questions.map((q) =>
+      patchMap[q.slug] ? ({ ...q, ...patchMap[q.slug] } as FirstVisitQuestion) : q,
+    ),
+  }));
+}
+
+// Build a single new question with sane Phase-E defaults (proposed status,
+// non-repeater, no pms_target unless overridden). Mirrors makeFindingQuestions'
+// `q` builder so injected rows are shaped like the generated ones.
+function makeBucket2Question(
+  phase: FirstVisitPhase,
+  scope: HubScope,
+  partial: Partial<FirstVisitQuestion> & Pick<FirstVisitQuestion, 'slug' | 'label' | 'type'>,
+): FirstVisitQuestion {
+  return {
+    description: null,
+    scope,
+    mode: 'observe',
+    options: [],
+    required: false,
+    repeater: false,
+    pms_target: null,
+    status: 'proposed',
+    verdict: null,
+    notes: null,
+    phase_id: phase.id,
+    phase_label: phase.label,
+    ...partial,
+  };
+}
+
+function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
+  return phases.map((p) => {
+    // E2 + E3 — parking phase (id '3'), location scope.
+    if (p.id === '3') {
+      const additions: FirstVisitQuestion[] = [
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_parking_spot_number',
+          label: 'Exact parking spot number',
+          type: 'text',
+          required: false,
+        }),
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_photo_parking_spot',
+          label: 'Photo of the parking spot',
+          type: 'file',
+          required: true,
+          anchor_to: 'fv_parking_dedicated_spots',
+        }),
+      ];
+      return { ...p, questions: [...p.questions, ...additions] };
+    }
+    // E6 — fuse box media, infrastructure phase (id '5'), location scope.
+    if (p.id === '5') {
+      const additions: FirstVisitQuestion[] = [
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_video_fusebox',
+          label: 'Fuse box video (reset/operation)',
+          type: 'file',
+          required: false,
+          anchor_to: 'fv_fusebox_location',
+        }),
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_photo_fusebox_location',
+          label: 'Photo of fuse box location',
+          type: 'file',
+          required: false,
+          anchor_to: 'fv_fusebox_location',
+        }),
+      ];
+      return { ...p, questions: [...p.questions, ...additions] };
+    }
+    return p;
+  });
+}
+
+// Patch map for the override-driven Phase E changes (E1, E3, E4, E5, E7, E8).
+const BUCKET2_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // E1 — building amenities: multi-select + custom, fixed option list.
+  fv_building_amenities_verify: {
+    multi_select: true,
+    allow_custom_options: true,
+    options: [
+      'Aufzug',
+      'Gemeinschafts Balkon/Terrasse',
+      'Gemeinschaftsgarten',
+      'Schwimmbad',
+      'Sauna',
+      'Fitnessraum',
+      'Konferenzräume',
+      'Reception/Concierge',
+    ],
+  },
+  // E3 — underground garage clearance height as a conditional follow-up on the
+  // parking-type select. Triggered by the on-site garage option.
+  fv_parking_actual_type: {
+    follow_up: {
+      when_value: 'Garage on-site',
+      label: 'Underground garage clearance height (cm)',
+      type: 'number',
+      required: false,
+    },
+  },
+  // E4 — lock brand collected once per unit: out of the checkin_step repeater,
+  // promoted to unit_category scope.
+  fv_step_lock_brand: {
+    group_id: null,
+    scope: 'unit_category',
+  },
+  // E5 — capacity fields always collected: clear the "Only if..." conditional
+  // gate that lived purely in the description text.
+  fv_capacity_actual_setup: { description: null },
+  fv_capacity_comments: { description: null },
+  // E7 — common areas: append two shared-space options to the existing list.
+  fv_common_area: {
+    options: ['Lobby', 'Rooftop', 'Courtyard', 'SmokingArea', 'Storage', 'Other', 'Shared kitchen', 'Shared garden'],
+  },
+  // E8 — media anchoring: each media question renders under its topic question.
+  fv_video_trash_location: { anchor_to: 'fv_trash_container_location' },
+  fv_photo_storage_room: { anchor_to: 'fv_storage_location' },
+  fv_video_parking_access: { anchor_to: 'fv_parking_access_instructions' },
+  fv_photo_fusebox: { anchor_to: 'fv_fusebox_location' },
+  fv_video_checkin_walkthrough: { anchor_to: 'fv_step_name' },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
-    hideDealStampingQuestions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+    hideDealStampingQuestions(
+      overrideQuestions(
+        injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+        BUCKET2_OVERRIDES,
+      ),
+    ),
   ),
 );
 export const ALL_QUESTIONS: FirstVisitQuestion[] = PHASES.flatMap((p) => p.questions);

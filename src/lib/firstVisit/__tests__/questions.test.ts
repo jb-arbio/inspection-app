@@ -46,7 +46,7 @@ describe('first-visit question config', () => {
       'fv_step_lock_type',
       'fv_step_smart_lock_provider',
       'fv_step_smart_lock_device_id',
-      'fv_step_lock_brand',
+      // fv_step_lock_brand moved to unit scope in the 2026-06-02 review
       'fv_step_lock_classification',
       'fv_step_key_storage_method',
       'fv_step_storage_brand',
