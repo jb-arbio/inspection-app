@@ -331,12 +331,25 @@ export function overrideQuestions(
   phases: FirstVisitPhase[],
   patchMap: Record<string, Partial<FirstVisitQuestion>>,
 ): FirstVisitPhase[] {
-  return phases.map((p) => ({
+  const matched = new Set<string>();
+  const next = phases.map((p) => ({
     ...p,
-    questions: p.questions.map((q) =>
-      patchMap[q.slug] ? ({ ...q, ...patchMap[q.slug] } as FirstVisitQuestion) : q,
-    ),
+    questions: p.questions.map((q) => {
+      if (!patchMap[q.slug]) return q;
+      matched.add(q.slug);
+      return { ...q, ...patchMap[q.slug] } as FirstVisitQuestion;
+    }),
   }));
+  // A patch key that matches no question is a silent landmine (typo, or the
+  // upstream XLSX renamed/removed a slug). Surface it in dev rather than
+  // letting the override vanish without a trace.
+  if (process.env.NODE_ENV !== 'production') {
+    const unmatched = Object.keys(patchMap).filter((slug) => !matched.has(slug));
+    if (unmatched.length > 0) {
+      console.warn(`overrideQuestions: no question matched these slugs: ${unmatched.join(', ')}`);
+    }
+  }
+  return next;
 }
 
 // Build a single new question with sane Phase-E defaults (proposed status,
@@ -399,7 +412,7 @@ function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
           slug: 'fv_photo_fusebox_location',
           label: 'Photo of fuse box location',
           type: 'file',
-          required: false,
+          required: true,
           anchor_to: 'fv_fusebox_location',
         }),
       ];
@@ -427,10 +440,11 @@ const BUCKET2_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
     ],
   },
   // E3 — underground garage clearance height as a conditional follow-up on the
-  // parking-type select. Triggered by the on-site garage option.
+  // parking-type select. Fires for either garage option (on-site or nearby) —
+  // a tall vehicle is blocked by the clearance of whichever garage is used.
   fv_parking_actual_type: {
     follow_up: {
-      when_value: 'Garage on-site',
+      when_value: ['Garage on-site', 'Garage nearby'],
       label: 'Underground garage clearance height (cm)',
       type: 'number',
       required: false,

@@ -49,14 +49,15 @@ describe('Phase E — bucket-2 config fixes', () => {
   });
 
   // E3 — underground garage clearance height as a conditional follow-up.
-  it('E3: fv_parking_actual_type has a number follow-up triggered by the on-site garage option', () => {
+  it('E3: fv_parking_actual_type has a number follow-up triggered by either garage option', () => {
     const q = one('fv_parking_actual_type');
     expect(q.follow_up).toBeDefined();
     expect(q.follow_up!.type).toBe('number');
     expect(q.follow_up!.label).toBe('Underground garage clearance height (cm)');
-    // Trigger value must be a real option on the parent select.
-    expect(q.options).toContain(q.follow_up!.when_value as string);
-    expect(q.follow_up!.when_value).toBe('Garage on-site');
+    // Fires for either garage option; every trigger must be a real parent option.
+    const triggers = q.follow_up!.when_value as string[];
+    expect(triggers).toEqual(['Garage on-site', 'Garage nearby']);
+    for (const t of triggers) expect(q.options).toContain(t);
   });
 
   // E4 — lock brand once per unit (config only).
@@ -89,6 +90,9 @@ describe('Phase E — bucket-2 config fixes', () => {
     }
     expect(video.label).toBe('Fuse box video (reset/operation)');
     expect(photo.label).toBe('Photo of fuse box location');
+    // The location photo is mandatory (proof of where the fuse box is); video optional.
+    expect(photo.required).toBe(true);
+    expect(video.required).toBe(false);
   });
 
   // E7 — common areas options appended (existing preserved).
