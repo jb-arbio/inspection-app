@@ -51,7 +51,7 @@ describe('first-visit question config', () => {
       'fv_step_key_storage_method',
       'fv_step_storage_brand',
       'fv_step_default_access_code',
-      'fv_step_lock_notes',
+      // fv_step_lock_notes was dropped in the 2026-06-02 review
     ];
     for (const slug of checkinStepSlugs) {
       const q = ALL_QUESTIONS.find((x) => x.slug === slug);
