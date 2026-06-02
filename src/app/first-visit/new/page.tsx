@@ -1,16 +1,22 @@
 import Link from 'next/link';
 import DealPicker from './DealPicker';
+import { getHubAdminSupabase } from '@/lib/firstVisit/hubSupabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
 async function getDeals() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/first-visit/deals`,
-    { cache: 'no-store' },
-  );
-  if (!res.ok) return [];
-  const { deals } = await res.json();
-  return deals as { id: string; name: string }[];
+  // Read directly via the hub admin client. Middleware already gates this
+  // page behind auth, so RLS-bypass via service role is safe here. Avoids
+  // a server-side fetch to our own API (which had no auth cookies → got
+  // redirected to /login → returned HTML → JSON.parse crash in prod).
+  const supabase = getHubAdminSupabase();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('deals')
+    .select('id, name')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  return (data ?? []) as { id: string; name: string }[];
 }
 
 export default async function NewVisitPage() {
