@@ -464,6 +464,14 @@ export default function VisitNavigator({
             >
               Export
             </button>
+            <a
+              href={`/api/first-visit/${inspectionId}/findings.csv`}
+              download
+              tabIndex={-1}
+              className="rounded border border-gray-300 px-2 py-0.5"
+            >
+              Findings CSV
+            </a>
           </div>
         </div>
       </header>
