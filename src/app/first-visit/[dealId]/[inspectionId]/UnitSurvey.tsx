@@ -694,7 +694,7 @@ type RenderNode =
   | { kind: 'question'; question: FirstVisitQuestion }
   | { kind: 'group'; groupId: string; questions: FirstVisitQuestion[] };
 
-function buildRenderPlan(questions: FirstVisitQuestion[]): RenderNode[] {
+export function buildRenderPlan(questions: FirstVisitQuestion[]): RenderNode[] {
   const out: RenderNode[] = [];
   let bucket: { groupId: string; questions: FirstVisitQuestion[] } | null = null;
   for (const q of questions) {

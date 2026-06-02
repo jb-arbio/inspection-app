@@ -277,9 +277,48 @@ function dedupePhases(phases: FirstVisitPhase[]): FirstVisitPhase[] {
   });
 }
 
+// --- Phase B: unified Findings repeater (review 2026-06-02 §5) ---
+// One repeating "findings" block (the post-visit shopping-list + repairs model)
+// injected at unit_category scope (phase 9d, Unit walkthrough) and at location
+// scope (phase 5, Building infrastructure & utilities). Replaces the dropped
+// 9d cost fields and 9e appliance-condition fields (see DROPPED_SLUGS).
+const UNIT_WALKTHROUGH_PHASE_ID = '9d';
+const BUILDING_INFRA_PHASE_ID = '5';
+
+const FINDING_CATEGORY_OPTIONS = ['Furniture','Appliance','Equipment','Bathroom','Structural/Building','Consumable','Other'];
+const FINDING_LOCATION_OPTIONS = ['Kitchen','Bathroom','Bedroom','Living room','Hallway','Balcony','Building/common','Other'];
+const FINDING_RESOLUTION_OPTIONS = ['Buy new (add)','Replace','Repair','Deep clean'];
+const FINDING_URGENCY_OPTIONS = ['Blocks go-live','Nice-to-have'];
+
+function makeFindingQuestions(scope: HubScope, phaseId: string, phaseLabel: string): FirstVisitQuestion[] {
+  const base = { scope, mode: 'observe' as Mode, status: 'proposed' as Status, verdict: null,
+    notes: null, repeater: true, group_id: 'finding', phase_id: phaseId, phase_label: phaseLabel };
+  const q = (slug: string, label: string, type: FieldType, required: boolean,
+    options: string[] = []): FirstVisitQuestion => ({ ...base, slug, label, description: null, type, required, options, pms_target: null });
+  return [
+    q('finding_item_name','Item / issue (clear name)','text',true),
+    q('finding_category','Category','select',true,FINDING_CATEGORY_OPTIONS),
+    q('finding_location','Location in unit','select',false,FINDING_LOCATION_OPTIONS),
+    q('finding_resolution','Resolution','select',true,FINDING_RESOLUTION_OPTIONS),
+    q('finding_quantity','Quantity','number',false),
+    q('finding_cost_estimate_eur','Cost estimate (€)','number',true),
+    q('finding_urgency','Urgency','select',false,FINDING_URGENCY_OPTIONS),
+    q('finding_notes','Notes','text',false),
+    q('finding_media','Photo / video','file',true),
+  ];
+}
+
+function injectFindings(phases: FirstVisitPhase[]): FirstVisitPhase[] {
+  return phases.map((p) => {
+    if (p.id === UNIT_WALKTHROUGH_PHASE_ID) return { ...p, questions: [...p.questions, ...makeFindingQuestions('unit_category', p.id, p.label)] };
+    if (p.id === BUILDING_INFRA_PHASE_ID) return { ...p, questions: [...p.questions, ...makeFindingQuestions('location', p.id, p.label)] };
+    return p;
+  });
+}
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
-    hideDealStampingQuestions(dropQuestions(dedupePhases(RAW.phases))),
+    hideDealStampingQuestions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
   ),
 );
 export const ALL_QUESTIONS: FirstVisitQuestion[] = PHASES.flatMap((p) => p.questions);
