@@ -4,6 +4,7 @@ import {
   phasesForScope,
   areaKeyFor,
   groupIdFor,
+  isScopeLevelRequired,
   buildAnchorMap,
   filterOutAnchored,
   type FirstVisitQuestion,
@@ -280,7 +281,7 @@ export function UnitSurvey({
   );
   const requiredStats = useMemo(() => {
     const inPhases = phases.flatMap((p) => p.questions);
-    const required = [...inPhases, ...allAnchoredInScope].filter((q) => q.required);
+    const required = [...inPhases, ...allAnchoredInScope].filter(isScopeLevelRequired);
     const done = required.filter((q) => {
       const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
       return isAnswered(answers[key]?.value);
@@ -310,7 +311,7 @@ export function UnitSurvey({
       const own = p.questions;
       const anchored = anchoredByAnchorPhase.get(p.id) ?? [];
       return [...own, ...anchored].some((q) => {
-        if (!q.required) return false;
+        if (!isScopeLevelRequired(q)) return false;
         const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
         return !isAnswered(answers[key]?.value);
       });
@@ -396,7 +397,7 @@ export function UnitSurvey({
             // Include anchored file-questions that render inside this phase.
             const anchoredHere = anchoredByAnchorPhase.get(p.id) ?? [];
             const reqInPhase = [...p.questions, ...anchoredHere].filter(
-              (q) => q.required,
+              isScopeLevelRequired,
             );
             const doneInPhase = reqInPhase.filter((q) => {
               const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;

@@ -1,3 +1,10 @@
+import { listTypeFor } from './findingsResolution';
+
+// Re-exported for existing importers (and tests) that pulled listTypeFor from
+// here. The implementation + the resolution→list-type map now live in
+// findingsResolution.ts, shared with questions.ts's picker options.
+export { listTypeFor };
+
 export type FindingRow = {
   unit_identifier: string; item_name: string; category: string;
   location_in_unit: string | null; resolution: string; quantity: number | null;
@@ -7,12 +14,6 @@ export type FindingRow = {
 
 const HEADER = ['unit_identifier','list_type','item_name','category','location_in_unit',
   'resolution','quantity','cost_estimate_eur','urgency','notes','media_links'];
-
-export function listTypeFor(resolution: string): 'Shopping' | 'Renovation' | 'Ops' {
-  if (resolution === 'Buy new (add)' || resolution === 'Replace') return 'Shopping';
-  if (resolution === 'Repair') return 'Renovation';
-  return 'Ops';
-}
 
 function cell(v: unknown): string {
   if (v == null) return '';
