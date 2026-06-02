@@ -10,6 +10,7 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Inspection App",
   description: "Property inspection tool for short-term rentals",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
