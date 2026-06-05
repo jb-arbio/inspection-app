@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeProgressFromAnswers } from '../progress';
-import { questionsForScope } from '../questions';
+import { questionsForScope, isScopeLevelRequired } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
 
@@ -26,8 +26,10 @@ function makeAnswer(
 }
 
 function requiredSlugs(scope: HubScope): string[] {
+  // Scope-level required = required AND not a repeater member (mirrors the
+  // production denominator in computeProgressFromAnswers).
   return questionsForScope(scope)
-    .filter((q) => q.required)
+    .filter(isScopeLevelRequired)
     .map((q) => q.slug);
 }
 
@@ -119,5 +121,31 @@ describe('computeProgressFromAnswers', () => {
       makeAnswer(locReq, 'ignored'),
     ]);
     expect(done).toBe(0);
+  });
+
+  it('does NOT count repeater-group (group_id) members toward scope-level required', () => {
+    // Findings are a block-repeater: 5 of their fields are required:true but
+    // carry group_id:'finding'. A scope with zero findings blocks is valid, so
+    // these must NOT inflate the scope-level required denominator. The
+    // unit_category scope includes the findings repeater; none of its required
+    // slugs should be a group_id question.
+    const uc = questionsForScope('unit_category');
+    const repeaterRequired = uc.filter((q) => q.required && q.group_id);
+    // Sanity: the config actually contains required repeater members, otherwise
+    // this test proves nothing.
+    expect(repeaterRequired.length).toBeGreaterThan(0);
+
+    const scopeRequired = requiredSlugs('unit_category');
+    for (const q of repeaterRequired) {
+      expect(
+        scopeRequired.includes(q.slug),
+        `${q.slug} is a repeater member and must not be a scope-level required question`,
+      ).toBe(false);
+    }
+
+    // And the total denominator must exclude every repeater member.
+    const { total } = computeProgressFromAnswers('unit_category', []);
+    const nonRepeaterRequired = uc.filter((q) => q.required && !q.group_id).length;
+    expect(total).toBe(nonRepeaterRequired);
   });
 });

@@ -13,11 +13,13 @@ export type ConditionalFollowUpProps = {
 // - For multi-select arrays: when the array includes the trigger.
 // - For everything else: shallow equality.
 function shouldShow(parentValue: unknown, whenValue: unknown): boolean {
-  if (parentValue === whenValue) return true;
+  // when_value may be a single value or a set of trigger values (e.g. a
+  // clearance-height follow-up that fires for either garage option).
+  const triggers = Array.isArray(whenValue) ? whenValue : [whenValue];
   if (Array.isArray(parentValue)) {
-    return parentValue.some((v) => v === whenValue);
+    return parentValue.some((v) => triggers.includes(v));
   }
-  return false;
+  return triggers.includes(parentValue);
 }
 
 // Inline follow-up input rendered below a trigger question. Renders nothing

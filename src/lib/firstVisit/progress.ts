@@ -1,5 +1,5 @@
 import { localDb, type LocalAnswer } from './db';
-import { phasesForScope } from './questions';
+import { phasesForScope, isScopeLevelRequired } from './questions';
 import type { HubScope } from './resolveScope';
 import { isAnswered } from '@/components/firstVisit/ProgressRing';
 
@@ -12,7 +12,11 @@ export function computeProgressFromAnswers(
   answers: LocalAnswer[],
 ): ScopeProgress {
   const questions = phasesForScope(scope).flatMap((p) => p.questions);
-  const required = questions.filter((q) => q.required);
+  // Repeater-group members (group_id set, e.g. findings, check-in steps) are
+  // required only within a populated block, never at scope level — see
+  // isScopeLevelRequired. Excluding them keeps the ring completable for a
+  // unit/building with zero findings.
+  const required = questions.filter(isScopeLevelRequired);
   const byKey = new Map<string, LocalAnswer>();
   for (const a of answers) byKey.set(a.question_key, a);
   let done = 0;

@@ -16,6 +16,7 @@ import {
   computeProgressFromAnswers,
   type ScopeProgress,
 } from '@/lib/firstVisit/progress';
+import { validateUnitIdentifier } from '@/lib/firstVisit/unitIdentifier';
 
 // Raw hub rows carry extra display fields beyond the lean HubSnapshot type.
 type HubLocation = { id: string; display_name?: string };
@@ -314,6 +315,18 @@ export default function VisitNavigator({
     setAdding(null);
   };
 
+  // Gate survey entry on a present identifier. Legacy/edge units may carry an
+  // empty label; opening their survey would produce answers with no
+  // human-readable owner, so block and route the inspector to rename instead.
+  const openUnit = (u: LocalTarget, property: LocalTarget) => {
+    if (!u.label || !u.label.trim()) {
+      alert('This unit needs a name before you can open it. Rename it first.');
+      setRenamingUnitId(u.id);
+      return;
+    }
+    setSelected({ kind: 'unit', target: u, property });
+  };
+
   const submit = async () => {
     const missing = totalUnansweredRequired();
     const message =
@@ -451,6 +464,14 @@ export default function VisitNavigator({
             >
               Export
             </button>
+            <a
+              href={`/api/first-visit/${inspectionId}/findings.csv`}
+              download
+              tabIndex={-1}
+              className="rounded border border-gray-300 px-2 py-0.5"
+            >
+              Findings CSV
+            </a>
           </div>
         </div>
       </header>
@@ -518,7 +539,7 @@ export default function VisitNavigator({
                           unit={u}
                           isRenaming={renamingUnitId === u.id}
                           progress={unitProgress}
-                          onOpen={() => setSelected({ kind: 'unit', target: u, property: p })}
+                          onOpen={() => openUnit(u, p)}
                           onStartRename={() => setRenamingUnitId(u.id)}
                           onCancelRename={() => setRenamingUnitId(null)}
                           onSaveRename={(label) => renameUnit(u, label)}
@@ -538,6 +559,7 @@ export default function VisitNavigator({
                     )}
                     unitLabel={unitLabel}
                     unitMeta={unitMetaLine}
+                    siblingLabels={unitsOf(p.id).map((t) => t.label)}
                     onAddFromHub={(u, label) => addUnitFromHub(p, u, label)}
                     onAddOnSite={(label) => addUnitOnSite(p, label)}
                   />
@@ -733,6 +755,7 @@ function AddUnitControl({
   unusedUnits,
   unitLabel,
   unitMeta,
+  siblingLabels,
   onAddFromHub,
   onAddOnSite,
 }: {
@@ -742,10 +765,18 @@ function AddUnitControl({
   unusedUnits: HubUnit[];
   unitLabel: (u: HubUnit) => string;
   unitMeta?: (u: HubUnit) => string | undefined;
+  // Labels of units already added to this property — used to enforce a unique
+  // identifier across both the hub and on-site add paths.
+  siblingLabels: string[];
   onAddFromHub: (u: HubUnit, label: string) => void;
   onAddOnSite: (label: string) => void;
 }) {
   const [label, setLabel] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  // When set, the identifier input is confirming a hub unit (pre-filled with
+  // its hub name); when null, the input adds an on-site unit. Both paths share
+  // the same input UI and the same uniqueness validation.
+  const [pendingHubUnit, setPendingHubUnit] = useState<HubUnit | null>(null);
 
   if (!open) {
     return (
@@ -758,88 +789,111 @@ function AddUnitControl({
     );
   }
 
+  const errorFor = (reason: 'empty' | 'duplicate') =>
+    reason === 'empty'
+      ? 'Enter a unit identifier'
+      : 'That identifier is already used in this property';
+
   const close = () => {
     setLabel('');
+    setError(null);
+    setPendingHubUnit(null);
     onCancel();
   };
 
+  // Pre-fill the shared identifier input with the hub's name and require the
+  // inspector to confirm it, validating uniqueness the same as on-site units.
   const pickHubUnit = (u: HubUnit) => {
-    // Add directly using the hub's name — no prefill-and-edit step. The
-    // inspector can rename later with the ✎ on the unit row if needed.
-    onAddFromHub(u, unitLabel(u));
-    setLabel('');
+    setPendingHubUnit(u);
+    setLabel(unitLabel(u));
+    setError(null);
   };
 
-  const addOnSite = () => {
-    const trimmed = label.trim();
-    if (!trimmed) return;
-    onAddOnSite(trimmed);
+  const confirm = () => {
+    const result = validateUnitIdentifier(label, siblingLabels);
+    if (!result.ok) {
+      setError(errorFor(result.reason));
+      return;
+    }
+    if (pendingHubUnit) {
+      onAddFromHub(pendingHubUnit, result.value);
+    } else {
+      onAddOnSite(result.value);
+    }
     setLabel('');
+    setError(null);
+    setPendingHubUnit(null);
   };
 
   return (
     <div className="mt-2 flex flex-col gap-3 rounded-md border border-gray-200 p-3">
-      {unusedUnits.length > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            From the hub
-          </div>
-          <ul className="flex flex-col divide-y divide-gray-100 overflow-hidden rounded border border-gray-200">
-            {unusedUnits.map((u) => {
-              const meta = unitMeta?.(u);
-              return (
-                <li key={u.id}>
-                  <button
-                    type="button"
-                    onClick={() => pickHubUnit(u)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50"
-                  >
-                    <div className="flex-1">
-                      <div className="text-sm font-medium leading-tight">
-                        {unitLabel(u)}
-                      </div>
-                      {meta && (
-                        <div className="mt-0.5 text-[11px] leading-tight text-gray-500">
-                          {meta}
+      {!pendingHubUnit &&
+        (unusedUnits.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              From the hub
+            </div>
+            <ul className="flex flex-col divide-y divide-gray-100 overflow-hidden rounded border border-gray-200">
+              {unusedUnits.map((u) => {
+                const meta = unitMeta?.(u);
+                return (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => pickHubUnit(u)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="text-sm font-medium leading-tight">
+                          {unitLabel(u)}
                         </div>
-                      )}
-                    </div>
-                    <span aria-hidden className="text-gray-400">+</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : (
-        <p className="text-xs text-gray-500">
-          No hub units for this property yet — add one on-site below.
-        </p>
-      )}
+                        {meta && (
+                          <div className="mt-0.5 text-[11px] leading-tight text-gray-500">
+                            {meta}
+                          </div>
+                        )}
+                      </div>
+                      <span aria-hidden className="text-gray-400">+</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">
+            No hub units for this property yet — add one on-site below.
+          </p>
+        ))}
 
       <div className="flex flex-col gap-1.5">
         <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-          Or add a unit not in the hub
+          {pendingHubUnit ? 'Confirm unit identifier' : 'Or add a unit not in the hub'}
         </div>
         <div className="flex gap-2">
           <input
+            autoFocus={!!pendingHubUnit}
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => {
+              setLabel(e.target.value);
+              if (error) setError(null);
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') addOnSite();
+              if (e.key === 'Enter') confirm();
             }}
             placeholder="Unit name / room number"
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
           <button
             type="button"
-            onClick={addOnSite}
+            onClick={confirm}
             disabled={!label.trim()}
             className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
           >
-            Add
+            {pendingHubUnit ? 'Confirm' : 'Add'}
           </button>
         </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
 
       <button

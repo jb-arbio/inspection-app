@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
 import type { LocalAnswer } from '@/lib/firstVisit/db';
 import { PrefilledField } from '@/components/firstVisit/PrefilledField';
+import { MediaButtons } from '@/components/firstVisit/MediaButtons';
 import { SkipAffordance } from '@/components/firstVisit/SkipAffordance';
 import { AttachAffordance } from '@/components/firstVisit/AttachAffordance';
 import { MultiSelectChips } from '@/components/firstVisit/MultiSelectChips';
@@ -284,6 +285,22 @@ export function QuestionRow({
             />
           )}
         </div>
+      ) : question.type === 'file' ? (
+        // Media capture inside a repeater block. PrefilledField has no 'file'
+        // branch (it would render a bare label), so we render MediaButtons here
+        // the same way the flat renderer in UnitSurvey does. The step index is
+        // folded into the question_key so each finding step's photos/videos are
+        // stored under a distinct key and don't collide across blocks.
+        <MediaButtons
+          inspectionId={inspectionId}
+          targetId={targetId}
+          areaKey={areaKey}
+          questionKey={stepIndex == null ? question.slug : `${question.slug}::${stepIndex}`}
+          answerId={answer?.id}
+          label={question.label}
+          description={question.description}
+          required={question.required}
+        />
       ) : (
         <PrefilledField
           question={question}
@@ -307,7 +324,7 @@ export function QuestionRow({
         }
       />
 
-      {!isMulti && (
+      {!isMulti && question.type !== 'file' && (
         <SkipAffordance
           question={question}
           value={value}

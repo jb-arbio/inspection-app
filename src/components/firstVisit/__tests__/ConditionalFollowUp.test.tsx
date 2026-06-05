@@ -66,4 +66,34 @@ describe('ConditionalFollowUp', () => {
     );
     expect(screen.getByLabelText(/Please specify/)).toBeInTheDocument();
   });
+
+  it('fires when parentValue matches any value in a when_value array', () => {
+    const q = makeQuestion({
+      follow_up: {
+        when_value: ['Garage on-site', 'Garage nearby'],
+        label: 'Clearance height (cm)',
+        type: 'number',
+      },
+    });
+    const { rerender } = render(
+      <ConditionalFollowUp
+        question={q}
+        parentValue="Garage nearby"
+        followUpValue=""
+        onFollowUpChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText(/Clearance height/)).toBeInTheDocument();
+
+    // and stays hidden for a non-trigger option
+    rerender(
+      <ConditionalFollowUp
+        question={q}
+        parentValue="Street free"
+        followUpValue=""
+        onFollowUpChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByLabelText(/Clearance height/)).toBeNull();
+  });
 });
