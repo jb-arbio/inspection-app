@@ -14,6 +14,8 @@ export function useVoiceDictation(onResult: (text: string) => void) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const startedAt = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
     const sync = () => setOnline(navigator.onLine);
@@ -36,6 +38,7 @@ export function useVoiceDictation(onResult: (text: string) => void) {
   useEffect(() => clearTimer, [clearTimer]);
 
   const onStart = useCallback(async () => {
+    if (status !== 'idle') return;
     if (!navigator.onLine) return;
     try {
       await start();
@@ -47,21 +50,22 @@ export function useVoiceDictation(onResult: (text: string) => void) {
     } catch {
       setStatus('idle');
     }
-  }, [start, clearTimer]);
+  }, [start, clearTimer, status]);
 
   const onStop = useCallback(async () => {
     clearTimer();
     const blob = await stop();
+    if (!mounted.current) return;
     setStatus('transcribing');
     try {
       if (blob && blob.size > 0) {
         const text = await postTranscription(blob);
-        if (text.trim()) onResult(text.trim());
+        if (text.trim() && mounted.current) onResult(text.trim());
       }
     } catch {
       // swallow — the field is left untouched; a toast can be added later.
     } finally {
-      setStatus('idle');
+      if (mounted.current) setStatus('idle');
     }
   }, [stop, clearTimer, onResult]);
 

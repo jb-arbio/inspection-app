@@ -47,4 +47,28 @@ describe('useVoiceDictation', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'));
     expect(onResult).not.toHaveBeenCalled();
   });
+
+  it('does not emit after unmount mid-transcription', async () => {
+    let resolvePost: (v: string) => void = () => {};
+    post.mockImplementationOnce(
+      () => new Promise<string>((r) => { resolvePost = r; }),
+    );
+    const onResult = vi.fn();
+    const { result, unmount } = renderHook(() => useVoiceDictation(onResult));
+    await act(async () => { await result.current.onStart(); });
+    // Fire onStop but do NOT await it — postTranscription is a pending deferred
+    // promise, so onStop won't resolve until we release it below.
+    let stopped: Promise<void> = Promise.resolve();
+    await act(async () => {
+      stopped = result.current.onStop();
+      await Promise.resolve();
+    });
+    // transcription is pending now
+    unmount();
+    await act(async () => {
+      resolvePost('Late text.');
+      await stopped;
+    });
+    expect(onResult).not.toHaveBeenCalled();
+  });
 });
