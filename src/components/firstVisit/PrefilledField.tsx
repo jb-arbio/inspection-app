@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
 import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRing';
+import { VoiceDictationButton } from '@/components/firstVisit/VoiceDictationButton';
+import { useVoiceDictation } from '@/lib/firstVisit/useVoiceDictation';
+import { appendDictation } from '@/lib/firstVisit/appendDictation';
 
 export type PrefilledFieldProps = {
   question: FirstVisitQuestion;
@@ -174,6 +177,15 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
           }}
         />
       )}
+      {question.type === 'text' && (
+        <VoiceDictation
+          current={value == null ? '' : String(value)}
+          onAppended={(next) => {
+            onChange({ value: next, wasAcceptedAsIs: false });
+            pulseDebounced();
+          }}
+        />
+      )}
       {question.type === 'number' && (
         <input
           id={id}
@@ -289,6 +301,37 @@ function AutoGrowTextarea({
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+}
+
+// Mic + recorder glue for one text field. Appends cleaned dictation to the
+// current value; never overwrites. Rendered only for text-type fields. The
+// current value is read through a ref so the hook's stable onResult always sees
+// the latest text when stacking multiple dictations.
+function VoiceDictation({
+  current,
+  onAppended,
+}: {
+  current: string;
+  onAppended: (next: string) => void;
+}) {
+  const currentRef = useRef(current);
+  currentRef.current = current;
+  const onResult = useCallback(
+    (text: string) => onAppended(appendDictation(currentRef.current, text)),
+    [onAppended],
+  );
+  const { status, online, elapsedMs, onStart, onStop } = useVoiceDictation(onResult);
+  return (
+    <div className="flex justify-end">
+      <VoiceDictationButton
+        status={status}
+        online={online}
+        elapsedMs={elapsedMs}
+        onStart={onStart}
+        onStop={onStop}
+      />
+    </div>
   );
 }
 
