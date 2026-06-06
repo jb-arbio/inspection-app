@@ -8,6 +8,12 @@ import {
   TRANSCRIBE_MODEL,
 } from '@/lib/firstVisit/cleanupPrompt';
 
+// Whisper + a gpt-4o-mini cleanup pass run sequentially; give the function
+// headroom over the platform default. Mirrors inspections/[id]/route.ts.
+export const maxDuration = 60;
+
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // 25 MB — Whisper's upload ceiling
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -22,6 +28,9 @@ export async function POST(req: Request): Promise<Response> {
   const audio = form.get('audio');
   if (!(audio instanceof Blob) || audio.size === 0) {
     return json({ error: 'no audio' }, 400);
+  }
+  if (audio.size > MAX_AUDIO_BYTES) {
+    return json({ error: 'audio too large' }, 413);
   }
 
   loadOpenAIKey();

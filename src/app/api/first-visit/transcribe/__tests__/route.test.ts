@@ -48,6 +48,21 @@ describe('POST /api/first-visit/transcribe', () => {
     expect(res.status).toBe(400);
   });
 
+  it('413 when the audio exceeds the size limit', async () => {
+    const big = new Blob(['x'], { type: 'audio/webm' });
+    Object.defineProperty(big, 'size', { value: 26 * 1024 * 1024 });
+    // undici's multipart formData() re-parses the body and rebuilds the Blob,
+    // dropping the overridden size — so hand the route a request whose
+    // formData() yields the exact oversized Blob instance.
+    const form = new FormData();
+    form.append('audio', big, 'clip.webm');
+    const req = new Request('http://test/api/first-visit/transcribe', { method: 'POST' });
+    vi.spyOn(req, 'formData').mockResolvedValue(form);
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    expect(transcribe).not.toHaveBeenCalled();
+  });
+
   it('transcribes then cleans, returning the cleaned text', async () => {
     transcribe.mockResolvedValue({ text: 'um the walls are uh clean no cracks' });
     chat.mockResolvedValue({
