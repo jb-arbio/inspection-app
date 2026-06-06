@@ -4,6 +4,10 @@ import { useAudioRecorder } from './useVoiceRecorder';
 import { postTranscription } from './postTranscription';
 import type { DictationStatus } from '@/components/firstVisit/VoiceDictationButton';
 
+// A genuine spoken clip is comfortably larger than this; anything smaller is an
+// accidental tap. Drop it silently rather than burn a Whisper call on noise.
+const MIN_AUDIO_BYTES = 1024; // 1 KB
+
 // Drives one field's mic: record → transcribe → emit cleaned text. onResult is
 // called with the cleaned snippet; the field decides how to merge it
 // (appendDictation). Audio is never persisted — the blob lives only for the POST.
@@ -58,7 +62,7 @@ export function useVoiceDictation(onResult: (text: string) => void) {
     if (!mounted.current) return;
     setStatus('transcribing');
     try {
-      if (blob && blob.size > 0) {
+      if (blob && blob.size >= MIN_AUDIO_BYTES) {
         const text = await postTranscription(blob);
         if (text.trim() && mounted.current) onResult(text.trim());
       }

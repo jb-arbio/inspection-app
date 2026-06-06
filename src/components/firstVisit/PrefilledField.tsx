@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FirstVisitQuestion } from '@/lib/firstVisit/questions';
 import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRing';
-import { VoiceDictationButton } from '@/components/firstVisit/VoiceDictationButton';
+import { VoiceDictationButton, type DictationStatus } from '@/components/firstVisit/VoiceDictationButton';
 import { useVoiceDictation } from '@/lib/firstVisit/useVoiceDictation';
 import { appendDictation } from '@/lib/firstVisit/appendDictation';
 
@@ -33,6 +33,10 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
   // Tiny confirmation pulse — shows next to the field after a value persists so
   // the inspector gets a trust signal that their input didn't vanish.
   const [showSaved, setShowSaved] = useState(false);
+  // Mirror the mic's transcribing state up so the text field can lock during the
+  // round-trip, preventing a mid-flight edit race with the appended dictation.
+  const [dictationStatus, setDictationStatus] = useState<DictationStatus>('idle');
+  const isTranscribing = dictationStatus === 'transcribing';
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -159,7 +163,8 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
       {question.type === 'text' && !isLongText && (
         <input
           id={id}
-          className="rounded-md border border-gray-300 px-3 py-2 text-base"
+          disabled={isTranscribing}
+          className="rounded-md border border-gray-300 px-3 py-2 text-base disabled:bg-gray-50 disabled:opacity-60"
           value={value == null ? '' : String(value)}
           onChange={(e) => {
             onChange({ value: e.target.value, wasAcceptedAsIs: false });
@@ -170,6 +175,7 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
       {question.type === 'text' && isLongText && (
         <AutoGrowTextarea
           id={id}
+          disabled={isTranscribing}
           value={value == null ? '' : String(value)}
           onChange={(v) => {
             onChange({ value: v, wasAcceptedAsIs: false });
@@ -180,6 +186,7 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
       {question.type === 'text' && (
         <VoiceDictation
           current={value == null ? '' : String(value)}
+          onStatusChange={setDictationStatus}
           onAppended={(next) => {
             onChange({ value: next, wasAcceptedAsIs: false });
             pulseDebounced();
@@ -280,10 +287,12 @@ function AutoGrowTextarea({
   id,
   value,
   onChange,
+  disabled,
 }: {
   id: string;
   value: string;
   onChange: (next: string) => void;
+  disabled?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
   useLayoutEffect(() => {
@@ -297,7 +306,8 @@ function AutoGrowTextarea({
       ref={ref}
       id={id}
       rows={3}
-      className="min-h-[5.25rem] resize-none overflow-hidden rounded-md border border-gray-300 px-3 py-2 text-base"
+      disabled={disabled}
+      className="min-h-[5.25rem] resize-none overflow-hidden rounded-md border border-gray-300 px-3 py-2 text-base disabled:bg-gray-50 disabled:opacity-60"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -317,9 +327,11 @@ function AutoGrowTextarea({
 function VoiceDictation({
   current,
   onAppended,
+  onStatusChange,
 }: {
   current: string;
   onAppended: (next: string) => void;
+  onStatusChange?: (status: DictationStatus) => void;
 }) {
   const currentRef = useRef(current);
   currentRef.current = current;
@@ -328,6 +340,11 @@ function VoiceDictation({
     [onAppended],
   );
   const { status, online, elapsedMs, onStart, onStop } = useVoiceDictation(onResult);
+  // Report status up so the parent can lock the field while transcribing. Effect
+  // (not render-time) keeps the parent's setState out of this component's render.
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
   return (
     <div className="flex justify-end">
       <VoiceDictationButton

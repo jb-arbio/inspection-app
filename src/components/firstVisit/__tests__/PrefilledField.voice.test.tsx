@@ -1,17 +1,23 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PrefilledField } from '../PrefilledField';
 import { makeQuestion } from './_fixtures';
 
 // Stub the hook so we can drive onResult and assert append behaviour without
-// touching MediaRecorder. Capture the latest onResult passed in.
+// touching MediaRecorder. Capture the latest onResult passed in. `mockStatus` is
+// per-test mutable so a test can render the field while "transcribing".
 let lastOnResult: ((t: string) => void) | null = null;
+let mockStatus: 'idle' | 'recording' | 'transcribing' = 'idle';
 vi.mock('@/lib/firstVisit/useVoiceDictation', () => ({
   useVoiceDictation: (onResult: (t: string) => void) => {
     lastOnResult = onResult;
-    return { status: 'idle', online: true, elapsedMs: 0, onStart: vi.fn(), onStop: vi.fn() };
+    return { status: mockStatus, online: true, elapsedMs: 0, onStart: vi.fn(), onStop: vi.fn() };
   },
 }));
+
+beforeEach(() => {
+  mockStatus = 'idle';
+});
 
 describe('PrefilledField voice', () => {
   it('renders a mic for text fields', () => {
@@ -42,5 +48,20 @@ describe('PrefilledField voice', () => {
       value: 'Walls clean. No cracks.',
       wasAcceptedAsIs: false,
     });
+  });
+
+  it('disables the text input while transcribing, enables it when idle', () => {
+    const q = makeQuestion({ type: 'text', slug: 'finding_notes', label: 'Notes' });
+
+    mockStatus = 'transcribing';
+    const { unmount } = render(
+      <PrefilledField question={q} hubValue={undefined} value="" onChange={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Notes')).toBeDisabled();
+    unmount();
+
+    mockStatus = 'idle';
+    render(<PrefilledField question={q} hubValue={undefined} value="" onChange={vi.fn()} />);
+    expect(screen.getByLabelText('Notes')).toBeEnabled();
   });
 });
