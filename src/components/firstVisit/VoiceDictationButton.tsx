@@ -26,7 +26,11 @@ export function VoiceDictationButton({
 }: VoiceDictationButtonProps) {
   if (status === 'transcribing') {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+      <span
+        role="status"
+        aria-live="polite"
+        className="inline-flex items-center gap-1 text-xs text-gray-500"
+      >
         <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-gray-600" />
         Transcribing…
       </span>
@@ -36,7 +40,11 @@ export function VoiceDictationButton({
   if (status === 'recording') {
     return (
       <span className="inline-flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+        <span
+          role="status"
+          aria-live="polite"
+          className="inline-flex items-center gap-1 text-xs font-medium text-red-600"
+        >
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
           <span className="tabular-nums">{fmt(elapsedMs)}</span>
         </span>
@@ -61,7 +69,7 @@ export function VoiceDictationButton({
         onClick={onStart}
         className="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        🎙️
+        <span aria-hidden="true">🎙️</span>
       </button>
       {!online && (
         <span className="text-[10px] text-gray-400">Voice needs a connection — type for now</span>

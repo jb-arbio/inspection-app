@@ -42,4 +42,9 @@ describe('VoiceDictationButton', () => {
     expect(screen.getByText(/transcribing/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /stop/i })).toBeNull();
   });
+
+  it('transcribing: exposes a status live-region', () => {
+    render(<VoiceDictationButton {...base} status="transcribing" />);
+    expect(screen.getByRole('status')).toHaveTextContent(/transcribing/i);
+  });
 });
