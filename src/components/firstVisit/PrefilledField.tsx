@@ -308,6 +308,12 @@ function AutoGrowTextarea({
 // current value; never overwrites. Rendered only for text-type fields. The
 // current value is read through a ref so the hook's stable onResult always sees
 // the latest text when stacking multiple dictations.
+//
+// Stacking is safe because recordings are strictly serial: useVoiceDictation
+// only re-enters 'recording' from 'idle', and status returns to 'idle' in
+// onStop's finally — after onResult has fired. So the parent's async onChange
+// has flushed a fresh `current` prop into currentRef before a second dictation
+// can complete. If onChange ever becomes optimistic/out-of-order, revisit this.
 function VoiceDictation({
   current,
   onAppended,
