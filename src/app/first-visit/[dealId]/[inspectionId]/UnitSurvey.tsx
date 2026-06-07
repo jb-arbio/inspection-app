@@ -40,6 +40,7 @@ export function UnitSurvey({
   snapshot,
   onBack,
   breadcrumb,
+  phaseIds,
 }: {
   inspectionId: string;
   target: SurveyTarget;
@@ -48,6 +49,7 @@ export function UnitSurvey({
   snapshot: HubSnapshot | null;
   onBack: () => void;
   breadcrumb?: string[];
+  phaseIds?: string[];
 }) {
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
   // WS-F media anchoring: pull photo/video file-questions out of their own
@@ -56,7 +58,7 @@ export function UnitSurvey({
   // scope so an anchor in phase A can pull a file-question that was originally
   // in phase B.
   const phases = useMemo(() => {
-    const raw = phasesForScope(scope);
+    const raw = phasesForScope(scope, phaseIds);
     const allInScope = raw.flatMap((p) => p.questions);
     const anchorMap = buildAnchorMap(allInScope);
     const anchoredSlugs = new Set<string>();
@@ -64,11 +66,11 @@ export function UnitSurvey({
       for (const q of arr) anchoredSlugs.add(q.slug);
     }
     return filterOutAnchored(raw, anchoredSlugs);
-  }, [scope]);
+  }, [scope, phaseIds]);
   const anchorMap = useMemo(() => {
-    const allInScope = phasesForScope(scope).flatMap((p) => p.questions);
+    const allInScope = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
     return buildAnchorMap(allInScope);
-  }, [scope]);
+  }, [scope, phaseIds]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
   const activeChipRef = useRef<HTMLButtonElement>(null);

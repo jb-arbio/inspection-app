@@ -30,6 +30,10 @@ describe('phasesForScope phase filter', () => {
     expect([...a, ...b].sort()).toEqual([...all].sort());
   });
 
+  it('an empty filter returns no phases (explicit empty, not "all")', () => {
+    expect(phasesForScope('deal', [])).toEqual([]);
+  });
+
   it('does not affect other scopes when no filter is given', () => {
     expect(phasesForScope('location').length).toBeGreaterThan(0);
     expect(phasesForScope('unit_category').length).toBeGreaterThan(0);
