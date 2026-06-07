@@ -508,11 +508,17 @@ export const CONFIG_META = {
 
 // Return phases (in original order) with their questions filtered to a single
 // scope. Drops phases that end up empty for the scope.
-export function phasesForScope(scope: HubScope): FirstVisitPhase[] {
-  return PHASES.map((p) => ({
+export function phasesForScope(scope: HubScope, phaseIds?: string[]): FirstVisitPhase[] {
+  const phases = PHASES.map((p) => ({
     ...p,
     questions: p.questions.filter((q) => q.scope === scope),
   })).filter((p) => p.questions.length > 0);
+  // Optional phase filter: lets the UI render a subset of a scope's phases as
+  // its own card (e.g. deal phase '1' at the top of the navigator, phase '11'
+  // "Deal evaluation" at the bottom). Absent = all phases, unchanged behavior.
+  if (!phaseIds) return phases;
+  const wanted = new Set(phaseIds);
+  return phases.filter((p) => wanted.has(p.id));
 }
 
 export function questionsForScope(scope: HubScope): FirstVisitQuestion[] {
