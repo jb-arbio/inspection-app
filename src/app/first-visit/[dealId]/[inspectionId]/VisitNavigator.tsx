@@ -18,6 +18,12 @@ import {
 } from '@/lib/firstVisit/progress';
 import { validateUnitIdentifier } from '@/lib/firstVisit/unitIdentifier';
 
+// The deal-scoped questions render as two navigator cards: metadata up top,
+// evaluation at the bottom — you can't judge a deal before walking it.
+// Module-level constants keep the phaseIds prop identity stable across renders.
+const DEAL_DETAILS_PHASES = ['1'];
+const DEAL_EVALUATION_PHASES = ['11'];
+
 // Raw hub rows carry extra display fields beyond the lean HubSnapshot type.
 type HubLocation = { id: string; display_name?: string };
 type HubUnit = {
@@ -81,7 +87,7 @@ function unitMetaLine(u: HubUnit): string | undefined {
 }
 
 type Selection =
-  | { kind: 'deal' }
+  | { kind: 'deal'; label: string; phaseIds: string[] }
   | { kind: 'property'; target: LocalTarget }
   | { kind: 'unit'; target: LocalTarget; property: LocalTarget };
 
@@ -143,9 +149,9 @@ export default function VisitNavigator({
   const unitsOf = (propId: string) =>
     targets.filter((t) => t.kind === 'unit' && t.parent_id === propId);
 
-  const progressFor = (targetId: string, scope: HubScope): ScopeProgress => {
+  const progressFor = (targetId: string, scope: HubScope, phaseIds?: string[]): ScopeProgress => {
     const own = answers.filter((a) => a.target_id === targetId);
-    return computeProgressFromAnswers(scope, own);
+    return computeProgressFromAnswers(scope, own, phaseIds);
   };
 
   // Count required questions still unanswered across every scope in this
@@ -349,10 +355,12 @@ export default function VisitNavigator({
     let scope: HubScope;
     let ctx;
     let breadcrumb: string[] | undefined;
+    let phaseIds: string[] | undefined;
     if (selected.kind === 'deal') {
-      target = { id: inspectionId, label: 'Visit details' };
+      target = { id: inspectionId, label: selected.label };
       scope = 'deal';
       ctx = { deal_id: dealId };
+      phaseIds = selected.phaseIds;
     } else if (selected.kind === 'property') {
       target = { id: selected.target.id, label: selected.target.label };
       scope = 'location';
@@ -380,6 +388,7 @@ export default function VisitNavigator({
           void reloadAnswers();
         }}
         breadcrumb={breadcrumb}
+        phaseIds={phaseIds}
       />
     );
   }
@@ -478,7 +487,9 @@ export default function VisitNavigator({
 
       {/* Visit details (deal-scoped) */}
       <button
-        onClick={() => setSelected({ kind: 'deal' })}
+        onClick={() =>
+          setSelected({ kind: 'deal', label: 'Visit details', phaseIds: DEAL_DETAILS_PHASES })
+        }
         className="mt-3 flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
       >
         <div className="flex-1">
@@ -486,7 +497,7 @@ export default function VisitNavigator({
           <div className="text-xs text-gray-500">Questions answered once for the whole visit</div>
         </div>
         {(() => {
-          const pr = progressFor(inspectionId, 'deal');
+          const pr = progressFor(inspectionId, 'deal', DEAL_DETAILS_PHASES);
           return pr.total > 0 ? <ProgressRing done={pr.done} total={pr.total} size={32} /> : null;
         })()}
         <span aria-hidden className="text-gray-400">›</span>
@@ -578,6 +589,24 @@ export default function VisitNavigator({
           onCreate={addPropertyOnSite}
         />
       </section>
+
+      {/* Deal evaluation — deliberately last: the verdict comes after the walkthrough. */}
+      <button
+        onClick={() =>
+          setSelected({ kind: 'deal', label: 'Deal evaluation', phaseIds: DEAL_EVALUATION_PHASES })
+        }
+        className="mt-5 flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
+      >
+        <div className="flex-1">
+          <div className="text-sm font-medium">Deal evaluation</div>
+          <div className="text-xs text-gray-500">Fill in at the end of the visit</div>
+        </div>
+        {(() => {
+          const pr = progressFor(inspectionId, 'deal', DEAL_EVALUATION_PHASES);
+          return pr.total > 0 ? <ProgressRing done={pr.done} total={pr.total} size={32} /> : null;
+        })()}
+        <span aria-hidden className="text-gray-400">›</span>
+      </button>
 
       <button
         onClick={submit}
