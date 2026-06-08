@@ -1,20 +1,14 @@
 import Link from 'next/link';
 import DealPicker from './DealPicker';
+import { listFirstVisitDeals } from '@/lib/firstVisit/deals';
 
 export const dynamic = 'force-dynamic';
 
-async function getDeals() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/first-visit/deals`,
-    { cache: 'no-store' },
-  );
-  if (!res.ok) return [];
-  const { deals } = await res.json();
-  return deals as { id: string; name: string }[];
-}
-
 export default async function NewVisitPage() {
-  const deals = await getDeals();
+  // Query the hub directly — never fetch our own API route from a server
+  // component (it's behind auth middleware and needs an absolute URL, which
+  // crashed prod). listFirstVisitDeals never throws, so this page can't 500.
+  const deals = await listFirstVisitDeals();
   return (
     <main className="mx-auto max-w-md p-6">
       <Link
