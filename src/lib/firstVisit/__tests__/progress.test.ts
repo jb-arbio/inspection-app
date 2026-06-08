@@ -149,3 +149,29 @@ describe('computeProgressFromAnswers', () => {
     expect(total).toBe(nonRepeaterRequired);
   });
 });
+
+describe('computeProgressFromAnswers phase filter', () => {
+  it('filtered deal progress for phases 1 and 11 sums to the unfiltered total', () => {
+    const whole = computeProgressFromAnswers('deal', []);
+    const meta = computeProgressFromAnswers('deal', [], ['1']);
+    const evaluation = computeProgressFromAnswers('deal', [], ['11']);
+    expect(meta.total + evaluation.total).toBe(whole.total);
+    expect(meta.total).toBeGreaterThan(0);
+    expect(evaluation.total).toBeGreaterThan(0);
+  });
+
+  it('an answer only counts toward the card that contains its question', () => {
+    const meta = computeProgressFromAnswers(
+      'deal',
+      [makeAnswer('fv_readiness_health_score', '7')],
+      ['1'],
+    );
+    const evaluation = computeProgressFromAnswers(
+      'deal',
+      [makeAnswer('fv_readiness_health_score', '7')],
+      ['11'],
+    );
+    expect(meta.done).toBe(0);
+    expect(evaluation.done).toBe(1);
+  });
+});

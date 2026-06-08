@@ -10,8 +10,9 @@ export type ScopeProgress = { done: number; total: number };
 export function computeProgressFromAnswers(
   scope: HubScope,
   answers: LocalAnswer[],
+  phaseIds?: string[],
 ): ScopeProgress {
-  const questions = phasesForScope(scope).flatMap((p) => p.questions);
+  const questions = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
   // Repeater-group members (group_id set, e.g. findings, check-in steps) are
   // required only within a populated block, never at scope level — see
   // isScopeLevelRequired. Excluding them keeps the ring completable for a
@@ -34,7 +35,8 @@ export async function loadAnswersForTarget(targetId: string): Promise<LocalAnswe
 export async function loadProgressForTarget(
   targetId: string,
   scope: HubScope,
+  phaseIds?: string[],
 ): Promise<ScopeProgress> {
   const answers = await loadAnswersForTarget(targetId);
-  return computeProgressFromAnswers(scope, answers);
+  return computeProgressFromAnswers(scope, answers, phaseIds);
 }
