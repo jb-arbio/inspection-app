@@ -24,6 +24,7 @@ import {
   type InspectionScopeContext,
 } from '@/lib/firstVisit/resolveScope';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
+import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
 
 // A target the survey is rendering for. The deal-scoped visit root is a
@@ -328,13 +329,15 @@ export function UnitSurvey({
   );
   const requiredStats = useMemo(() => {
     const inPhases = phases.flatMap((p) => p.questions);
-    const required = [...inPhases, ...allAnchoredInScope].filter(isScopeLevelRequired);
+    // Required AND currently visible: a hidden required dependent must not keep
+    // the ring from reaching 100% (mirrors progress.ts requiredVisible).
+    const required = requiredVisible([...inPhases, ...allAnchoredInScope], valueByKey);
     const done = required.filter((q) => {
       const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
       return isAnswered(answers[key]?.value);
     }).length;
     return { done, total: required.length };
-  }, [phases, allAnchoredInScope, answers, target.id]);
+  }, [phases, allAnchoredInScope, answers, target.id, valueByKey]);
 
   // Index of the next phase that has a required, unanswered question, searching
   // from currentIdx + 1 forward, then wrapping to 0..currentIdx. Returns null
@@ -357,8 +360,9 @@ export function UnitSurvey({
     const phaseHasIncomplete = (p: (typeof phases)[number]) => {
       const own = p.questions;
       const anchored = anchoredByAnchorPhase.get(p.id) ?? [];
-      return [...own, ...anchored].some((q) => {
-        if (!isScopeLevelRequired(q)) return false;
+      // Only visible required questions block completion — a hidden required
+      // dependent must not make a phase look perpetually incomplete.
+      return requiredVisible([...own, ...anchored], valueByKey).some((q) => {
         const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
         return !isAnswered(answers[key]?.value);
       });
@@ -370,7 +374,7 @@ export function UnitSurvey({
       if (phaseHasIncomplete(phases[i])) return i;
     }
     return null;
-  }, [phases, anchoredByAnchorPhase, answers, target.id, currentIdx]);
+  }, [phases, anchoredByAnchorPhase, answers, target.id, currentIdx, valueByKey]);
 
   if (phases.length === 0) {
     return (

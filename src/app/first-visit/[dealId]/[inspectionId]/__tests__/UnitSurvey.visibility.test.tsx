@@ -42,7 +42,58 @@ const depQ: FirstVisitQuestion = {
   visible_when: { question: 'ctrl', equals: true },
 };
 
-const phases: FirstVisitPhase[] = [
+// 3-question cascade chain: A gates B, B gates C. Used by the cascade-clear test.
+const chainA: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'chainA',
+  label: 'A: enable B?',
+  type: 'boolean',
+};
+const chainB: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'chainB',
+  label: 'B: enable C?',
+  type: 'boolean',
+  visible_when: { question: 'chainA', equals: true },
+};
+const chainC: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'chainC',
+  label: 'C: detail',
+  type: 'text',
+  visible_when: { question: 'chainB', equals: true },
+};
+
+// Progress-ring fixture: one always-visible required question (`reqVisible`) plus
+// one required dependent (`reqDep`) hidden by a "No" controller (`ringCtrl`). Once
+// the always-visible required questions are answered the ring must read complete,
+// because the hidden required dependent must not count toward the total.
+const ringCtrl: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'ringCtrl',
+  label: 'Ring: has extra?',
+  type: 'boolean',
+  required: true,
+};
+const reqVisible: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'reqVisible',
+  label: 'Ring: always required',
+  type: 'text',
+  required: true,
+};
+const reqDep: FirstVisitQuestion = {
+  ...baseQ,
+  slug: 'reqDep',
+  label: 'Ring: required only when extra',
+  type: 'text',
+  required: true,
+  visible_when: { question: 'ringCtrl', equals: true },
+};
+
+// Mutable phase set so individual tests can swap in their own fixture before
+// rendering. Defaults to the controller/dependent pair used by the first suite.
+let activePhases: FirstVisitPhase[] = [
   { id: 'p1', label: 'Phase 1', questions: [ctrlQ, depQ] },
 ];
 
@@ -52,7 +103,8 @@ vi.mock('@/lib/firstVisit/questions', async () => {
   );
   return {
     ...actual,
-    phasesForScope: () => phases.map((p) => ({ ...p, questions: [...p.questions] })),
+    phasesForScope: () =>
+      activePhases.map((p) => ({ ...p, questions: [...p.questions] })),
     areaKeyFor: (q: FirstVisitQuestion) => q.phase_id,
     groupIdFor: (q: FirstVisitQuestion) => q.group_id ?? null,
   };
@@ -63,6 +115,8 @@ vi.mock('@/lib/firstVisit/analytics', () => ({ track: vi.fn() }));
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  // Reset to the default controller/dependent fixture; individual tests override.
+  activePhases = [{ id: 'p1', label: 'Phase 1', questions: [ctrlQ, depQ] }];
 });
 
 afterEach(async () => {
@@ -162,5 +216,74 @@ describe('UnitSurvey — conditional branching (visible_when)', () => {
       .toArray();
     const depRow = row.find((r) => r.question_key === 'dep');
     expect(depRow?.value).toBeNull();
+  });
+
+  it('cascade-clears a 3-deep chain (A→B→C) when the root flips to hiding', async () => {
+    activePhases = [
+      { id: 'p1', label: 'Phase 1', questions: [chainA, chainB, chainC] },
+    ];
+    await seedAnswer('chainA', 'p1', true);
+    await seedAnswer('chainB', 'p1', true);
+    await seedAnswer('chainC', 'p1', 'leaf detail');
+    renderSurvey();
+
+    // Whole chain visible while A=true, B=true.
+    await waitFor(() =>
+      expect(screen.getByLabelText('C: detail')).toBeInTheDocument(),
+    );
+    expect(screen.getByLabelText('B: enable C?')).toBeInTheDocument();
+
+    // Flip A → No. B is hidden directly (A gates B); C is hidden because B's
+    // value is cleared (B gates C), which cascades on the next render.
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'No' })[0],
+    );
+
+    // Both B and C leave the DOM.
+    await waitFor(() =>
+      expect(screen.queryByLabelText('B: enable C?')).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(screen.queryByLabelText('C: detail')).toBeNull(),
+    );
+
+    // Both stored values are cleared to null.
+    await waitFor(async () => {
+      const rows = await localDb.answers
+        .where('target_id')
+        .equals('tgt-1')
+        .toArray();
+      const b = rows.find((r) => r.question_key === 'chainB');
+      const c = rows.find((r) => r.question_key === 'chainC');
+      expect(b?.value).toBeNull();
+      expect(c?.value).toBeNull();
+    });
+  });
+});
+
+describe('UnitSurvey — in-panel progress ring honors visible_when', () => {
+  it('reads complete once visible required answered, ignoring a hidden required dependent', async () => {
+    activePhases = [
+      { id: 'p1', label: 'Phase 1', questions: [ringCtrl, reqVisible, reqDep] },
+    ];
+    // Controller = No → reqDep is hidden and must not count toward the total.
+    await seedAnswer('ringCtrl', 'p1', false);
+    await seedAnswer('reqVisible', 'p1', 'answered');
+    renderSurvey();
+
+    // The always-visible required question is rendered; the hidden required
+    // dependent is not.
+    await waitFor(() =>
+      expect(screen.getByText('Ring: always required')).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Ring: required only when extra')).toBeNull();
+
+    // Ring counts only the two visible required questions (ringCtrl + reqVisible),
+    // both answered → done === total.
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText('Progress: 2 of 2 required answered'),
+      ).toBeInTheDocument(),
+    );
   });
 });
