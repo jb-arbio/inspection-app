@@ -8,6 +8,61 @@ import {
 import type { HubScope } from './resolveScope';
 import { isAnswered } from '@/components/firstVisit/ProgressRing';
 
+// A target (deal / property / unit) the submit dialog needs a "what's left"
+// list for. `answers` are this target's own answers; `phaseIds` optionally
+// narrows to a phase subset (the deal scope is split into two cards).
+export type RemainingTargetInput = {
+  label: string;
+  scope: HubScope;
+  answers: LocalAnswer[];
+  phaseIds?: string[];
+};
+
+// Pure: the unanswered, visible, scope-level required questions for one target.
+// Reuses requiredVisible (visibility-aware) and isAnswered so the "what's left"
+// list stays consistent with the completion ring's denominator. Empty array
+// means this target is fully complete.
+export function remainingRequiredForTarget(
+  target: RemainingTargetInput,
+): FirstVisitQuestion[] {
+  const questions = phasesForScope(target.scope, target.phaseIds).flatMap(
+    (p) => p.questions,
+  );
+  const byKey = new Map<string, LocalAnswer>();
+  for (const a of target.answers) byKey.set(a.question_key, a);
+  const valueByKey = new Map<string, unknown>(
+    [...byKey.entries()].map(([k, a]) => [k, a.value]),
+  );
+  const required = requiredVisible(questions, valueByKey);
+  return required.filter((q) => {
+    const a = byKey.get(q.slug);
+    return !(a && isAnswered(a.value));
+  });
+}
+
+// A target grouped with its still-unanswered required questions, ready for the
+// submit dialog to render. Targets that are complete are omitted by
+// remainingRequiredByTarget below.
+export type RemainingGroup = {
+  label: string;
+  questions: FirstVisitQuestion[];
+};
+
+// Aggregate the "what's left" list across every target in the visit. Each input
+// is one target; groups with nothing remaining are dropped so the dialog only
+// shows targets that still need work. Pure — callers pass already-loaded
+// answers (the navigator holds them in state).
+export function remainingRequiredByTarget(
+  targets: RemainingTargetInput[],
+): RemainingGroup[] {
+  const groups: RemainingGroup[] = [];
+  for (const t of targets) {
+    const questions = remainingRequiredForTarget(t);
+    if (questions.length > 0) groups.push({ label: t.label, questions });
+  }
+  return groups;
+}
+
 export type ScopeProgress = { done: number; total: number };
 
 // Scope-level required questions that are currently visible. A question hidden
