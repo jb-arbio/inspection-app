@@ -1,8 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { computeProgressFromAnswers } from '../progress';
+import { computeProgressFromAnswers, requiredVisible } from '../progress';
 import { questionsForScope, isScopeLevelRequired } from '../questions';
+import type { FirstVisitQuestion } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
+
+// Sane FirstVisitQuestion defaults; spread a partial to override only the
+// fields a given test cares about.
+function mkQ(overrides: Partial<FirstVisitQuestion> = {}): FirstVisitQuestion {
+  return {
+    slug: 'fv_q',
+    label: 'Q',
+    description: null,
+    scope: 'location',
+    mode: 'data',
+    type: 'text',
+    options: [],
+    required: false,
+    repeater: false,
+    pms_target: null,
+    status: 'existing',
+    verdict: null,
+    notes: null,
+    phase_id: '1',
+    phase_label: 'Phase 1',
+    ...overrides,
+  };
+}
 
 function makeAnswer(
   question_key: string,
@@ -147,6 +171,17 @@ describe('computeProgressFromAnswers', () => {
     const { total } = computeProgressFromAnswers('unit_category', []);
     const nonRepeaterRequired = uc.filter((q) => q.required && !q.group_id).length;
     expect(total).toBe(nonRepeaterRequired);
+  });
+
+  it('hidden (visible_when unsatisfied) required questions drop out of total', () => {
+    const qs = [
+      mkQ({ slug: 'fv_parking_available', type: 'select', required: true }),
+      mkQ({ slug: 'fv_parking_spots', type: 'number', required: true,
+            visible_when: { question: 'fv_parking_available', equals: 'Yes' } }),
+    ];
+    expect(requiredVisible(qs, new Map([['fv_parking_available', 'No']])).map((q) => q.slug))
+      .toEqual(['fv_parking_available']);
+    expect(requiredVisible(qs, new Map([['fv_parking_available', 'Yes']])).length).toBe(2);
   });
 });
 
