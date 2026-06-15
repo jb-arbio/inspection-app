@@ -26,11 +26,25 @@ function todayIso(): string {
 // Fix: make the element UNCONTROLLED (defaultValue, the DOM owns the text while
 // the user types) and only write the prop value back IMPERATIVELY when it
 // changes from an EXTERNAL source — voice-append, Accept-prefilled, skip/undo,
-// or the branching clear-on-hide. We distinguish external from the user's own
-// echo by remembering the last value we emitted: if the incoming prop differs
-// from BOTH the live DOM value and our last emit, it's external → write it
-// (preserving voice/Accept); otherwise it's our own keystroke echo → leave the
-// DOM (and caret) untouched.
+// or the branching clear-on-hide.
+//
+// Distinguishing external writes from the user's own keystroke echoes by
+// value-comparison alone is NOT enough under fast typing: each keystroke
+// round-trips through async autosave, so when a user types "a" then "b" before
+// the first echo returns, the STALE echo "a" arrives while the DOM already
+// shows "ab". That stale "a" equals neither the latest emit ("ab") nor the DOM
+// ("ab"), so a naive guard would write it — visibly reverting the text and
+// jumping the caret until the next echo restores it.
+//
+// The clean rule keys off FOCUS instead: while the element is focused, the user
+// is actively typing and the DOM is authoritative — EVERY incoming value is an
+// echo of their own edit stream (current or stale), so we never write it. Only
+// when the element is NOT focused do we adopt external values. This is correct
+// for every external source in this app because they all blur the input first:
+// voice (tapping the mic button), Accept (tabIndex=-1 button), skip/undo
+// buttons, date-autofill (programmatic, on mount), and clear-on-hide
+// (programmatic). If a genuine external write could ever land while the field
+// is focused, this would need superseded-emit tracking instead — but none can.
 //
 // Returns a ref to attach to the element, the initial defaultValue, and an
 // onChange that forwards the live DOM value upward without re-controlling it.
@@ -52,7 +66,11 @@ function useEchoInput(
   // Last value we emitted upward; seeded so the first render isn't "external".
   const lastEmittedRef = useRef(value);
   const onExternalSyncRef = useRef(onExternalSync);
-  onExternalSyncRef.current = onExternalSync;
+  // Keep the callback ref current without mutating during render (react-hooks/refs).
+  // No dep array → runs after every commit, always tracking the latest callback.
+  useEffect(() => {
+    onExternalSyncRef.current = onExternalSync;
+  });
 
   const ref = useCallback(
     (el: HTMLInputElement | HTMLTextAreaElement | null) => {
@@ -61,14 +79,20 @@ function useEchoInput(
     [],
   );
 
-  // Sync EXTERNAL prop changes into the DOM imperatively, after commit. Skip
-  // when the value already matches the DOM (our own echo) so the caret survives.
+  // Sync EXTERNAL prop changes into the DOM imperatively, after commit.
   useLayoutEffect(() => {
     const el = elRef.current;
     if (!el) return;
-    if (value === lastEmittedRef.current) return; // echo of our own keystroke
-    if (value === el.value) return; // already displayed
-    el.value = value; // external source → adopt it
+    // While focused, the user is typing: the DOM is authoritative and every
+    // incoming value is an echo of their own edit stream (possibly a STALE one
+    // under fast typing). Never write into a focused field — that prevents the
+    // stale-echo clobber that would revert text and jump the caret.
+    if (document.activeElement === el) {
+      lastEmittedRef.current = value;
+      return;
+    }
+    if (value === el.value) return; // already displayed (idempotent)
+    el.value = value; // not focused → genuine external source, adopt it
     lastEmittedRef.current = value;
     onExternalSyncRef.current?.();
   }, [value]);
@@ -143,7 +167,7 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
   useEffect(() => clearTimers, [clearTimers]);
 
   // Text + textarea use a local echo buffer to keep the caret stable on
-  // mid-string edits (see useEchoBuffer). Only these two branches need it; the
+  // mid-string edits (see useEchoInput). Only these two branches need it; the
   // number/date/select/boolean/scale branches have no mid-string caret problem.
   // Shared keystroke handler for the single-line input and the textarea: forward
   // the value up and pulse the debounced "saved" confirmation.
