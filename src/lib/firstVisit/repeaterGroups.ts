@@ -29,6 +29,41 @@ const GROUPS: Record<string, RepeaterGroupMeta> = {
     title: 'Consumables',
     itemNoun: 'Item',
   },
+  appliance_amenity: {
+    title: 'Appliances & amenities',
+    intro: 'Catalogue each appliance or amenity in the unit — its brand, location, how to use it, and whether it is working.',
+    itemNoun: 'Appliance',
+  },
+  utility_provider: {
+    title: 'Utilities & providers',
+    intro: 'Record each utility — provider name, account number, and emergency contact.',
+    itemNoun: 'Utility',
+  },
+  maintenance_procedure: {
+    title: 'Maintenance procedures',
+    intro: 'Document recurring maintenance procedures and the steps observed for each.',
+    itemNoun: 'Procedure',
+  },
+  equipment_issue: {
+    title: 'Equipment issues',
+    intro: 'List equipment problems found — add one per issue with a photo, type, description, and estimated cost.',
+    itemNoun: 'Issue',
+  },
+  furniture_issue: {
+    title: 'Furniture issues',
+    intro: 'List furniture problems found — add one per issue with a photo, type, description, and estimated cost.',
+    itemNoun: 'Issue',
+  },
+  maintenance_issue: {
+    title: 'Maintenance issues',
+    intro: 'List maintenance problems found — add one per issue with a photo, type, description, and estimated cost.',
+    itemNoun: 'Issue',
+  },
+  checkout_step: {
+    title: 'Check-out steps',
+    intro: 'Document each check-out step in sequence, from securing the unit to leaving the building.',
+    itemNoun: 'Step',
+  },
 };
 
 // Resolve the display metadata for a group_id. Defaults to itemNoun 'Step' and
