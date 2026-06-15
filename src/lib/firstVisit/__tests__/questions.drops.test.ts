@@ -11,9 +11,10 @@ describe('Phase A — dropped questions', () => {
 
   it('drops the expected count', () => {
     // 35 Bucket-1 (existing in JSON) + 5 (9d cost) + 2 (9e appliance) = 42;
-    // + Task 17 fv_photo_fusebox (1) + Task 18 consumables (4) = 47.
+    // + Task 17 fv_photo_fusebox (1) + Task 18 consumables (4) = 47;
+    // + Task 20 fv_unit_location_in_building (1) = 48.
     // fuse-box dups handled status-aware (not in DROPPED_SLUGS).
-    expect(DROPPED_SLUGS.size).toBe(47);
+    expect(DROPPED_SLUGS.size).toBe(48);
   });
 
   it('keeps a representative non-dropped question', () => {

@@ -144,6 +144,11 @@ export const DROPPED_SLUGS = new Set<string>([
   'fv_photo_fusebox',
   // Task 18 — consumables block has no on-site use; drop the whole group.
   'consumable.name', 'consumable.meets_standard', 'consumable.notes', 'consumable.photo',
+  // Task 20 — unit identity overlap. "Location of unit in building" (free text,
+  // e.g. "second floor, east wing") just restates the structured "Floor of unit"
+  // (fv_unit_floor_number) we keep. Per the feedback we cut the redundant
+  // free-text rather than maintain two near-identical fields.
+  'fv_unit_location_in_building',
 ]);
 
 // Fuse-box proposed duplicates: drop only the status==='proposed' copies.
@@ -434,6 +439,17 @@ function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
           required: true,
           anchor_to: 'fv_fusebox_location',
         }),
+        // Task 20 — fire exit route is hard to describe in writing. Replace the
+        // free-text-as-primary capture with a required video walkthrough; the
+        // text field (fv_fire_exit_primary) is relaxed to optional notes and
+        // this video anchors under it. Same phase/scope as fv_fire_exit_primary.
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_video_fire_exit',
+          label: 'Fire exit route (video walkthrough)',
+          type: 'file',
+          required: true,
+          anchor_to: 'fv_fire_exit_primary',
+        }),
       ];
       return { ...p, questions: [...p.questions, ...additions] };
     }
@@ -682,6 +698,29 @@ const TASK19_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   },
 };
 
+// --- Task 20: unit identity / fire-exit format / recommendation summary ---
+// Field feedback (2026-06-11):
+//   - Fire exit: "unclear how to describe an exit route in writing." The
+//     required video (fv_video_fire_exit, injected above) is now the primary
+//     capture, so the free-text becomes optional notes.
+//   - Recommendation summary: purpose unclear + reconsider mandatory. Relax to
+//     optional and rewrite the label/description to say exactly what to write.
+// (Unit-identity overlap is handled by dropping fv_unit_location_in_building via
+// DROPPED_SLUGS; property naming is N/A — the only name field, fv_visit_deal_name,
+// is already hidden via HIDDEN_DEAL_STAMPING_SLUGS.)
+const TASK20_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  fv_fire_exit_primary: {
+    label: 'Fire exit route notes (optional)',
+    required: false,
+  },
+  fv_readiness_recommendation_summary: {
+    label: 'Summary recommendation',
+    description:
+      'One-line recommendation: go-live as planned, go-live with conditions, or actions needed before go-live.',
+    required: false,
+  },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
@@ -696,16 +735,19 @@ export const PHASES: FirstVisitPhase[] = stripVerifyWord(
           overrideQuestions(
             overrideQuestions(
               overrideQuestions(
-                injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-                BUCKET2_OVERRIDES,
+                overrideQuestions(
+                  injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+                  BUCKET2_OVERRIDES,
+                ),
+                BRANCHING_OVERRIDES,
               ),
-              BRANCHING_OVERRIDES,
+              FIELD_TYPE_OVERRIDES,
             ),
-            FIELD_TYPE_OVERRIDES,
+            CONTENT_REWORK_OVERRIDES,
           ),
-          CONTENT_REWORK_OVERRIDES,
+          TASK19_OVERRIDES,
         ),
-        TASK19_OVERRIDES,
+        TASK20_OVERRIDES,
       ),
     ),
   ),

@@ -121,3 +121,59 @@ describe('Task 19 — reframe mismatch/owner/new-property paths', () => {
     expect(text).not.toContain('mismatch');
   });
 });
+
+describe('Task 20 — unit identity / fire-exit format / recommendation summary / property name', () => {
+  // Change 1 — unit identity overlap. Keep the structured floor field
+  // (fv_unit_floor_number); drop the overlapping free-text "Location of unit in
+  // building" (fv_unit_location_in_building), whose example ("second floor, east
+  // wing") just restates the floor. Per the feedback we reduce redundancy by
+  // dropping the free-text rather than keeping two near-identical fields.
+  it('keeps fv_unit_floor_number and drops the overlapping fv_unit_location_in_building', () => {
+    const floor = one('fv_unit_floor_number');
+    expect(floor.label.toLowerCase()).toContain('floor');
+    expect(bySlug('fv_unit_location_in_building')).toEqual([]);
+  });
+
+  // Change 2 — fire exit route becomes video-based. A required video walkthrough
+  // is injected and anchored to the (now optional) free-text notes field.
+  it('injects fv_video_fire_exit as a required file anchored to fv_fire_exit_primary', () => {
+    const q = one('fv_video_fire_exit');
+    expect(q.type).toBe('file');
+    expect(q.required).toBe(true);
+    expect(q.anchor_to).toBe('fv_fire_exit_primary');
+    expect(q.scope).toBe('location');
+    expect(q.phase_id).toBe('5');
+    expect(q.label.toLowerCase()).toContain('video');
+  });
+
+  it('makes fv_fire_exit_primary optional and relabels it as notes', () => {
+    const q = one('fv_fire_exit_primary');
+    expect(q.required).toBe(false);
+    expect(q.label.toLowerCase()).toContain('notes');
+    expect(q.label.toLowerCase()).toContain('optional');
+  });
+
+  it('leaves fv_fire_exit_secondary unchanged (required boolean with follow-up)', () => {
+    const q = one('fv_fire_exit_secondary');
+    expect(q.type).toBe('boolean');
+    expect(q.required).toBe(true);
+    expect(q.follow_up).toBeTruthy();
+  });
+
+  // Change 3 — recommendation summary is no longer mandatory and gets a
+  // clarifying label + description.
+  it('makes fv_readiness_recommendation_summary optional with a clarifying label/description', () => {
+    const q = one('fv_readiness_recommendation_summary');
+    expect(q.required).toBe(false);
+    expect(q.label.toLowerCase()).toContain('recommendation');
+    expect((q.description ?? '').toLowerCase()).toContain('go-live');
+  });
+
+  // Change 4 — property name. N/A: the only property-name field is
+  // fv_visit_deal_name, which is already in HIDDEN_DEAL_STAMPING_SLUGS (hidden
+  // from the on-site survey). No other property/location-name field exists, so
+  // there is nothing on-site that requires the visitor to name the property.
+  it('has no on-site property-name field (fv_visit_deal_name already hidden) — N/A', () => {
+    expect(bySlug('fv_visit_deal_name')).toEqual([]);
+  });
+});
