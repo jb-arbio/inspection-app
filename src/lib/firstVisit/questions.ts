@@ -76,6 +76,12 @@ export type FirstVisitQuestion = {
   // media anchoring). Renderer in WS-B does not act on this; it is here so
   // the type is ready for WS-F.
   anchor_to?: string;
+  // Declarative visibility: this question renders, counts toward required, and
+  // keeps its value ONLY when the controlling question's answer satisfies the
+  // predicate. Used to suppress dependent questions on "No/None/N/A" answers.
+  // `question` is the controlling question's slug. Unanswered controller:
+  // equals/in → not satisfied (hidden); not_equals/not_in → not excluded (visible).
+  visible_when?: VisibleWhen;
 };
 
 export type FirstVisitPhase = {
@@ -550,6 +556,60 @@ export function groupIdFor(q: FirstVisitQuestion): string | null {
 // UnitSurvey.tsx.
 export function isScopeLevelRequired(q: FirstVisitQuestion): boolean {
   return q.required && !q.group_id;
+}
+
+// Declarative conditional-branching predicate. A question's `visible_when` rule
+// names a controlling question (by slug) and a condition over that question's
+// answer; `isVisible` decides whether the dependent question should render,
+// count toward required, and keep its value. This is a pure predicate — it does
+// not touch the config-transform pipeline above. Later tasks call it from
+// progress.ts (ring) and UnitSurvey.tsx (renderer).
+//
+// `answersByKey` maps controlling question slug → its current answer value
+// (string, boolean, or string[] for multi-selects). Unanswered controllers:
+// equals/in are NOT satisfied (hidden); not_equals/not_in are NOT excluded
+// (visible). Comparisons are strict (`===`), so booleans compare by identity.
+export type VisibleWhen = {
+  question: string;
+  equals?: unknown;
+  not_equals?: unknown;
+  in?: unknown[];
+  not_in?: unknown[];
+};
+
+// A single answer matches `candidate` if it equals it, or — for multi-select
+// answers (arrays) — if any selected option equals it.
+function matchesValue(answer: unknown, candidate: unknown): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => v === candidate);
+  return answer === candidate;
+}
+// As above but against a list: true if the answer (or any selected option) is
+// in `list`.
+function inList(answer: unknown, list: unknown[]): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => list.includes(v));
+  return list.includes(answer);
+}
+
+export function isVisible(
+  rule: VisibleWhen | undefined,
+  answersByKey: Map<string, unknown>,
+): boolean {
+  if (!rule) return true;
+  const answered = answersByKey.has(rule.question);
+  const a = answersByKey.get(rule.question);
+  if ('equals' in rule && rule.equals !== undefined) {
+    return answered && matchesValue(a, rule.equals);
+  }
+  if ('in' in rule && rule.in) {
+    return answered && inList(a, rule.in);
+  }
+  if ('not_equals' in rule && rule.not_equals !== undefined) {
+    return !answered || !matchesValue(a, rule.not_equals);
+  }
+  if ('not_in' in rule && rule.not_in) {
+    return !answered || !inList(a, rule.not_in);
+  }
+  return true;
 }
 
 // WS-F media anchoring: photo/video file questions opt into rendering inline
