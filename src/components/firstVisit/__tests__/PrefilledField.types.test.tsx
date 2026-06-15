@@ -45,6 +45,29 @@ describe('PrefilledField — field types', () => {
     expect(screen.getByRole('button', { name: /No/i })).toBeInTheDocument();
   });
 
+  it('scale renders a segmented button per option', () => {
+    render(
+      <PrefilledField
+        question={makeQuestion({
+          label: 'Cleanliness',
+          type: 'scale',
+          options: ['Good', 'Acceptable', 'Poor'],
+        })}
+        hubValue={undefined}
+        value="Acceptable"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Acceptable' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Poor' })).toBeInTheDocument();
+    // label/htmlFor target stays resolvable
+    expect(screen.getByLabelText('Cleanliness')).toBeInTheDocument();
+  });
+
   it('date renders a date input', () => {
     render(
       <PrefilledField

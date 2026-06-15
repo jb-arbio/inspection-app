@@ -5,6 +5,7 @@ import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRi
 import { VoiceDictationButton, type DictationStatus } from '@/components/firstVisit/VoiceDictationButton';
 import { useVoiceDictation } from '@/lib/firstVisit/useVoiceDictation';
 import { appendDictation } from '@/lib/firstVisit/appendDictation';
+import { ScaleField } from '@/components/firstVisit/ScaleField';
 
 export type PrefilledFieldProps = {
   question: FirstVisitQuestion;
@@ -238,6 +239,14 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
             </option>
           ))}
         </select>
+      )}
+      {question.type === 'scale' && (
+        <ScaleField
+          question={question}
+          value={value}
+          onChange={onChange}
+          onSelected={pulseImmediate}
+        />
       )}
       {question.type === 'boolean' && (
         <div className="flex gap-2">

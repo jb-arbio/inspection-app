@@ -9,6 +9,10 @@ import { FINDING_RESOLUTION_OPTIONS } from './findingsResolution';
 export type FieldType =
   | 'text'
   | 'select'
+  // Segmented single-select: a tap-friendly row of buttons (one per `options`
+  // entry) storing the chosen option string. Same data shape as 'select', just
+  // a mobile-first rendering consistent with the boolean Yes/No buttons.
+  | 'scale'
   | 'boolean'
   | 'number'
   | 'date'
@@ -534,6 +538,25 @@ const BRANCHING_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   fv_accessibility_unit_door_widths: { visible_when: { question: 'fv_building_elevator_working', not_equals: 'No elevator' } },
 };
 
+// --- Phase G: field-type fixes (field feedback 2026-06-11) ---
+// Two rendering changes the inspectors asked for. Kept in their own map (not
+// folded into BRANCHING_OVERRIDES) so the "make X a scale / multi-select"
+// intent reads as a distinct concern from the conditional-branching predicates.
+const FIELD_TYPE_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // Hallway cleanliness was a yes/no, which couldn't capture "mostly fine but
+  // a bit tired". Promote it to the same Excellent→Poor scale the building-state
+  // question already uses, so the two condition fields read consistently. The
+  // option list is duplicated verbatim from fv_building_state in the JSON.
+  fv_building_hallways_clean: {
+    type: 'scale',
+    options: ['Excellent', 'Good', 'Acceptable', 'Needs attention', 'Poor'],
+  },
+  // Guest-type suitability is genuinely multi-valued (a unit can suit couples
+  // AND business travellers). Flip to the existing multi-select chip renderer;
+  // options stay exactly as the JSON defines them.
+  fv_best_for_guest_type: { multi_select: true },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
@@ -545,10 +568,13 @@ export const PHASES: FirstVisitPhase[] = stripVerifyWord(
       // readable as separate maps.
       overrideQuestions(
         overrideQuestions(
-          injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-          BUCKET2_OVERRIDES,
+          overrideQuestions(
+            injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+            BUCKET2_OVERRIDES,
+          ),
+          BRANCHING_OVERRIDES,
         ),
-        BRANCHING_OVERRIDES,
+        FIELD_TYPE_OVERRIDES,
       ),
     ),
   ),
