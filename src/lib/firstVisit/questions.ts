@@ -454,6 +454,45 @@ function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
       // Prepend so the controller renders ahead of the gated measurement.
       return { ...p, questions: [controller, ...p.questions] };
     }
+    // Task 19.1 — direct capacity fields, unit capacity phase (id '9b'),
+    // unit_category scope. Field feedback: the old "Actual capacity / bed setup
+    // if mismatch" + "Capacity comments (only if mismatch)" pair asked the
+    // visitor to compare against an owner claim they can't see on-site. Replace
+    // that framing with two direct, always-collected numbers; the legacy
+    // free-text fields stay as optional notes (relaxed + relabelled in the
+    // override maps below).
+    if (p.id === '9b') {
+      const additions: FirstVisitQuestion[] = [
+        makeBucket2Question(p, 'unit_category', {
+          slug: 'fv_capacity_base',
+          label: 'Base capacity (standard beds)',
+          type: 'number',
+          required: true,
+        }),
+        makeBucket2Question(p, 'unit_category', {
+          slug: 'fv_capacity_max',
+          label: 'Max capacity (incl. sofa beds/extra)',
+          type: 'number',
+          required: true,
+        }),
+      ];
+      // Prepend so the direct fields lead the phase, ahead of the free-text notes.
+      return { ...p, questions: [...additions, ...p.questions] };
+    }
+    // Task 19.2 — Wi-Fi presence controller, WiFi phase (id '7'), location
+    // scope. New units may have no Wi-Fi installed yet; the speed-test numbers
+    // shouldn't be required in that case. This boolean gates the two speed
+    // questions via visible_when (see TASK19_OVERRIDES).
+    if (p.id === '7') {
+      const controller = makeBucket2Question(p, 'location', {
+        slug: 'fv_wifi_present',
+        label: 'Wi-Fi available?',
+        type: 'boolean',
+        required: true,
+      });
+      // Prepend so the controller renders ahead of the gated speed tests.
+      return { ...p, questions: [controller, ...p.questions] };
+    }
     return p;
   });
 }
@@ -597,6 +636,52 @@ const CONTENT_REWORK_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   },
 };
 
+// --- Task 19: reframe mismatch / owner-comparison / new-property paths ---
+// Field feedback (2026-06-11): several questions were framed around an
+// owner-supplied baseline the on-site visitor can't see ("if mismatch", "only
+// if meaningfully different from owner claim"), and others made no sense for a
+// brand-new unit with nothing set up yet. This map (a) relaxes + neutralizes
+// the legacy capacity free-text, (b) gates Wi-Fi speeds on a presence boolean,
+// (c) gates cleaning/laundry detail on their respective "Not yet set up"
+// controllers, and (d) strips owner-comparison framing from fv_view_comments.
+// Maintenance detail gating is N/A — fv_maintenance_details and
+// fv_maintenance_cost_estimate_eur are already in DROPPED_SLUGS (Findings repeater).
+const TASK19_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // 19.1 + 19.5 — legacy capacity free-text: keep as optional notes, drop the
+  // owner-comparison "if mismatch" framing now that fv_capacity_base/_max carry
+  // the real numbers. (required was already false in the JSON; set explicitly.)
+  fv_capacity_actual_setup: {
+    label: 'Capacity / bed setup notes',
+    description: null,
+    required: false,
+  },
+  fv_capacity_comments: {
+    label: 'Capacity comments',
+    description: null,
+    required: false,
+  },
+
+  // 19.2 — Wi-Fi speeds only required when Wi-Fi is present.
+  fv_wifi_download_speed_mbps: { visible_when: { question: 'fv_wifi_present', equals: true } },
+  fv_wifi_upload_speed_mbps: { visible_when: { question: 'fv_wifi_present', equals: true } },
+
+  // 19.3 — cleaning detail: a "Not yet set up" property has no provider and no
+  // existing cleaning to take over, so hide the provider name + takeover question.
+  fv_cleaning_provider_name: { visible_when: { question: 'fv_cleaning_setup', not_equals: 'Not yet set up' } },
+  fv_cleaning_takeover_possible: { visible_when: { question: 'fv_cleaning_setup', not_equals: 'Not yet set up' } },
+  // Laundry detail gates on the laundry controller (its own 'Not yet set up'
+  // option), not the cleaning one — they're independent setups.
+  fv_laundry_provider_name: { visible_when: { question: 'fv_laundry_setup', not_equals: 'Not yet set up' } },
+  fv_laundry_delivery_frequency: { visible_when: { question: 'fv_laundry_setup', not_equals: 'Not yet set up' } },
+
+  // 19.5 — owner-comparison framing: the visitor can't see the owner's claim,
+  // so reframe as a plain, always-optional comments field.
+  fv_view_comments: {
+    label: 'View comments',
+    description: null,
+  },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
@@ -610,14 +695,17 @@ export const PHASES: FirstVisitPhase[] = stripVerifyWord(
         overrideQuestions(
           overrideQuestions(
             overrideQuestions(
-              injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-              BUCKET2_OVERRIDES,
+              overrideQuestions(
+                injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+                BUCKET2_OVERRIDES,
+              ),
+              BRANCHING_OVERRIDES,
             ),
-            BRANCHING_OVERRIDES,
+            FIELD_TYPE_OVERRIDES,
           ),
-          FIELD_TYPE_OVERRIDES,
+          CONTENT_REWORK_OVERRIDES,
         ),
-        CONTENT_REWORK_OVERRIDES,
+        TASK19_OVERRIDES,
       ),
     ),
   ),
