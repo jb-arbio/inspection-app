@@ -137,6 +137,13 @@ export const DROPPED_SLUGS = new Set<string>([
   'fv_maintenance_details',
   // Phase 9e appliance condition — repeater becomes pure inventory
   'appliance.status', 'appliance.statusNote',
+  // Task 17 — fuse-box media consolidated into one video (fv_video_fusebox).
+  // The JSON-sourced photo is now redundant. (The injected
+  // fv_photo_fusebox_location is removed at its injection site instead — see
+  // injectBucket2Questions — because DROPPED_SLUGS runs before injection.)
+  'fv_photo_fusebox',
+  // Task 18 — consumables block has no on-site use; drop the whole group.
+  'consumable.name', 'consumable.meets_standard', 'consumable.notes', 'consumable.photo',
 ]);
 
 // Fuse-box proposed duplicates: drop only the status==='proposed' copies.
@@ -412,25 +419,40 @@ function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
       ];
       return { ...p, questions: [...p.questions, ...additions] };
     }
-    // E6 — fuse box media, infrastructure phase (id '5'), location scope.
+    // E6 / Task 17 — fuse box media, infrastructure phase (id '5'), location
+    // scope. Field feedback: three separate fuse-box media requests (location
+    // photo, reset video, photo) collapse into ONE video covering both the
+    // location and the reset/operation. This is now the single required
+    // fuse-box capture; the JSON fv_photo_fusebox is dropped via DROPPED_SLUGS,
+    // and the previously-injected fv_photo_fusebox_location is removed here.
     if (p.id === '5') {
       const additions: FirstVisitQuestion[] = [
         makeBucket2Question(p, 'location', {
           slug: 'fv_video_fusebox',
-          label: 'Fuse box video (reset/operation)',
-          type: 'file',
-          required: false,
-          anchor_to: 'fv_fusebox_location',
-        }),
-        makeBucket2Question(p, 'location', {
-          slug: 'fv_photo_fusebox_location',
-          label: 'Photo of fuse box location',
+          label: 'Fuse box video (location + reset)',
           type: 'file',
           required: true,
           anchor_to: 'fv_fusebox_location',
         }),
       ];
       return { ...p, questions: [...p.questions, ...additions] };
+    }
+    // Task 18.3 — furnishing-scope controller, unit physical measurements phase
+    // (id '9c'), unit_category scope. The window/ceiling measurement photo and
+    // the ceiling-height measurement only matter when Arbio furnishes/equips the
+    // unit (curtain ordering). This boolean controller gates both via
+    // visible_when (see FURNISHING_SCOPE_OVERRIDES). It sits in 9c so it is
+    // answered before/alongside fv_ceiling_height_m (same phase) and remains in
+    // scope for fv_photo_window_ceiling (phase 9h, same unit_category scope).
+    if (p.id === '9c') {
+      const controller = makeBucket2Question(p, 'unit_category', {
+        slug: 'fv_furnishing_by_arbio',
+        label: 'Will Arbio furnish/equip this unit?',
+        type: 'boolean',
+        required: true,
+      });
+      // Prepend so the controller renders ahead of the gated measurement.
+      return { ...p, questions: [controller, ...p.questions] };
     }
     return p;
   });
@@ -482,7 +504,7 @@ const BUCKET2_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   fv_video_trash_location: { anchor_to: 'fv_trash_container_location' },
   fv_photo_storage_room: { anchor_to: 'fv_storage_location' },
   fv_video_parking_access: { anchor_to: 'fv_parking_access_instructions' },
-  fv_photo_fusebox: { anchor_to: 'fv_fusebox_location' },
+  // (fv_photo_fusebox anchor override removed: Task 17 drops that question.)
   fv_video_checkin_walkthrough: { anchor_to: 'fv_step_name' },
 };
 
@@ -557,6 +579,24 @@ const FIELD_TYPE_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   fv_best_for_guest_type: { multi_select: true },
 };
 
+// --- Content rework (field feedback, Tasks 17 & 18) ---
+// Override-driven content changes that aren't drops or injections:
+//   - Trash dropdown loses 'Inside apartment' (containers live outside the unit;
+//     the option produced misleading data).
+//   - The two furnishing-only measurements are gated on fv_furnishing_by_arbio
+//     (injected above), so they vanish when Arbio does not equip the unit.
+const CONTENT_REWORK_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  fv_trash_container_location: {
+    options: ['Backyard', 'Courtyard', 'Basement', 'Ground floor room', 'Street'],
+  },
+  fv_photo_window_ceiling: {
+    visible_when: { question: 'fv_furnishing_by_arbio', equals: true },
+  },
+  fv_ceiling_height_m: {
+    visible_when: { question: 'fv_furnishing_by_arbio', equals: true },
+  },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
@@ -569,12 +609,15 @@ export const PHASES: FirstVisitPhase[] = stripVerifyWord(
       overrideQuestions(
         overrideQuestions(
           overrideQuestions(
-            injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-            BUCKET2_OVERRIDES,
+            overrideQuestions(
+              injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+              BUCKET2_OVERRIDES,
+            ),
+            BRANCHING_OVERRIDES,
           ),
-          BRANCHING_OVERRIDES,
+          FIELD_TYPE_OVERRIDES,
         ),
-        FIELD_TYPE_OVERRIDES,
+        CONTENT_REWORK_OVERRIDES,
       ),
     ),
   ),

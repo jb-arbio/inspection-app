@@ -173,10 +173,15 @@ describe('computeProgressFromAnswers', () => {
       ).toBe(false);
     }
 
-    // And the total denominator must exclude every repeater member.
+    // And the total denominator must exclude every repeater member. With empty
+    // answers it must also exclude questions hidden by an unsatisfied
+    // visible_when (e.g. the furnishing-gated measurements gate on
+    // fv_furnishing_by_arbio:equals true, which is unsatisfied when unanswered).
     const { total } = computeProgressFromAnswers('unit_category', []);
-    const nonRepeaterRequired = uc.filter((q) => q.required && !q.group_id).length;
-    expect(total).toBe(nonRepeaterRequired);
+    const nonRepeaterRequiredVisible = uc.filter(
+      (q) => q.required && !q.group_id && isVisible(q.visible_when, new Map()),
+    ).length;
+    expect(total).toBe(nonRepeaterRequiredVisible);
   });
 
   it('hidden (visible_when unsatisfied) required questions drop out of total', () => {
