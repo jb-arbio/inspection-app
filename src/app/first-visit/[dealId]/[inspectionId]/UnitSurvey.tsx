@@ -20,10 +20,12 @@ import { localDb, type LocalAnswer } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import {
   resolveScopeId,
+  scopeLabel,
   type HubScope,
   type InspectionScopeContext,
 } from '@/lib/firstVisit/resolveScope';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
+import { repeaterGroupMeta } from '@/lib/firstVisit/repeaterGroups';
 import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
 
@@ -492,8 +494,13 @@ export function UnitSurvey({
       </div>
 
       <section key={phase.id} ref={sectionRef} className="mt-4 scroll-mt-20">
-        <div className="text-sm font-medium uppercase tracking-wide text-gray-500">
-          {phase.label}
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium uppercase tracking-wide text-gray-500">
+            {phase.label}
+          </div>
+          <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600">
+            {scopeLabel(scope)}
+          </span>
         </div>
         <div className="mt-2 flex flex-col gap-3">
           {buildRenderPlan(phase.questions).map((node) => {
@@ -510,10 +517,14 @@ export function UnitSurvey({
               const groupAnchored = node.questions.flatMap(
                 (gq) => anchorMap.get(gq.slug) ?? [],
               );
+              const groupMeta = repeaterGroupMeta(node.groupId);
               return (
                 <div key={`group-${node.groupId}`} className="flex flex-col gap-3">
                   <StepGroup
                     groupId={node.groupId}
+                    groupLabel={groupMeta.title}
+                    intro={groupMeta.intro}
+                    itemNoun={groupMeta.itemNoun}
                     questions={node.questions}
                     inspectionId={inspectionId}
                     targetId={target.id}

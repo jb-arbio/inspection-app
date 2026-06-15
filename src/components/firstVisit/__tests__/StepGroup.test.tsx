@@ -46,6 +46,32 @@ describe('StepGroup', () => {
     expect(screen.queryByRole('button', { name: /Remove Step/ })).toBeNull();
   });
 
+  it('renders a passed title + intro as a group header', () => {
+    const onChange = vi.fn(async () => undefined);
+    const setNotes = vi.fn();
+    render(
+      <StepGroup
+        groupId="finding"
+        groupLabel="Findings"
+        intro="List items that need repair."
+        itemNoun="Finding"
+        questions={groupQuestions}
+        inspectionId="i1"
+        targetId="t1"
+        areaKey="p1"
+        hubValueLookup={() => undefined}
+        answers={{}}
+        onChange={onChange}
+        setNotes={setNotes}
+      />,
+    );
+    expect(screen.getByText('Findings')).toBeInTheDocument();
+    expect(screen.getByText('List items that need repair.')).toBeInTheDocument();
+    // Blocks read "Finding 1" when itemNoun='Finding'.
+    expect(screen.getByText('Finding 1')).toBeInTheDocument();
+    expect(screen.queryByText('Step 1')).toBeNull();
+  });
+
   it('clicking "+ Add step" adds a second block', async () => {
     const user = userEvent.setup();
     setup();

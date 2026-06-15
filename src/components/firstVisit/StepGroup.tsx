@@ -34,6 +34,12 @@ function answerKey(
 export type StepGroupProps = {
   groupId: string;
   groupLabel?: string;
+  // Optional one-line description rendered under the group title to explain
+  // what the block collects. Sourced from repeaterGroupMeta at the call site.
+  intro?: string;
+  // Noun used to label each block ("Finding 1", "Step 1", ...). Defaults to
+  // 'Step' for back-compat with the previous hardcoded behaviour.
+  itemNoun?: string;
   questions: FirstVisitQuestion[];
   inspectionId: string;
   targetId: string;
@@ -56,6 +62,8 @@ export type StepGroupProps = {
 export function StepGroup({
   groupId,
   groupLabel,
+  intro,
+  itemNoun = 'Step',
   questions,
   inspectionId,
   targetId,
@@ -121,15 +129,20 @@ export function StepGroup({
 
   return (
     <div className="flex flex-col gap-3">
-      {groupLabel && (
-        <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
-          {groupLabel}
+      {(groupLabel || intro) && (
+        <div className="flex flex-col gap-0.5">
+          {groupLabel && (
+            <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {groupLabel}
+            </div>
+          )}
+          {intro && <p className="text-xs text-gray-500">{intro}</p>}
         </div>
       )}
       {blocks.map((idx, displayIdx) => (
         <BlockCard
           key={`${groupId}-${idx}`}
-          title={`Step ${displayIdx + 1}`}
+          title={`${itemNoun} ${displayIdx + 1}`}
           showRemove={blocks.length > 1}
           onRemove={() => removeBlock(idx)}
         >
