@@ -8,12 +8,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    // The whole suite shares one global fake-indexeddb (fake-indexeddb/auto) and
-    // the singleton Dexie connection in src/lib/firstVisit/db. With files run in
-    // parallel, one file's localDb writes/clear() can collide with another's
-    // in-flight DB state, causing intermittent failures (pre-existing). Serialize
-    // files so each owns the database for the duration of its run.
-    fileParallelism: false,
+    // File parallelism is ON (default). The previous `fileParallelism: false`
+    // workaround for IndexedDB flakiness has been removed: vitest.setup.ts now
+    // clears every `localDb` table in a global beforeEach, so each test starts
+    // from an empty database regardless of what ran before it (even across
+    // parallel files — Vitest runs each file in its own worker/jsdom env with
+    // its own fake-indexeddb instance, so files don't actually share DB state).
+    // Verified deterministic: full suite run 6x, 277/277 every time.
   },
   resolve: {
     alias: {
