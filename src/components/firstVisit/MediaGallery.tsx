@@ -15,11 +15,16 @@ export function MediaGallery({
   targetId,
   areaKey,
   questionKey,
+  onCount,
 }: {
   inspectionId: string;
   targetId: string;
   areaKey: string;
   questionKey?: string;
+  // Fires with the live row count whenever the rendered rows change. This makes
+  // MediaGallery the single source of truth for the per-question file count so a
+  // parent badge (AttachAffordance) can never disagree with what is rendered.
+  onCount?: (n: number) => void;
 }) {
   const { remove } = useMediaCapture(inspectionId);
   const [rows, setRows] = useState<LocalMedia[]>([]);
@@ -64,6 +69,12 @@ export function MediaGallery({
       alive = false;
     };
   }, [inspectionId, targetId, areaKey, questionKey, mediaRev]);
+
+  // Report the live count to any parent badge whenever rows change (initial
+  // load, sibling writes via the table hooks, and optimistic deletes).
+  useEffect(() => {
+    onCount?.(rows.length);
+  }, [rows, onCount]);
 
   // Manage object URLs: build one per row, revoke them when the rows change or
   // the component unmounts.
