@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMediaCapture } from '@/lib/firstVisit/useMediaCapture';
 import { localDb } from '@/lib/firstVisit/db';
+import { MediaGallery } from './MediaGallery';
 
 // Per-question "+ Attach" affordance: lets the inspector add a free-text note,
 // a photo, or a video to any question. None are required. Photo/video reuse
@@ -170,11 +171,12 @@ export function AttachAffordance({
               ⤓ video
             </button>
           </div>
-          {mediaCount > 0 && (
-            <p className="text-[11px] text-gray-500">
-              {mediaCount} file{mediaCount === 1 ? '' : 's'} attached.
-            </p>
-          )}
+          <MediaGallery
+            inspectionId={inspectionId}
+            targetId={targetId}
+            areaKey={areaKey}
+            questionKey={questionKey}
+          />
         </div>
       )}
 
