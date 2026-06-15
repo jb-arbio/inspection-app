@@ -482,12 +482,73 @@ const BUCKET2_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   fv_video_checkin_walkthrough: { anchor_to: 'fv_step_name' },
 };
 
+// --- Phase F: conditional branching (field-test feedback 2026-06-11) ---
+// Inspectors reported the survey kept asking for details that make no sense
+// once a section is answered "no": a unit with no parking still asked for spot
+// count / access instructions / a spot photo; the luggage-storage block kept
+// prompting for storage location when there was no storage; the safety section
+// asked where the fire extinguisher / smoke detector is even after marking it
+// absent. Each dependent below gets a `visible_when` predicate so it renders,
+// counts toward required, and keeps its value ONLY when the controlling answer
+// warrants it. Predicates are matched to the REAL controller type (Task 0):
+// the parking/safety presence questions are SELECTS (negative = 'None'/'No'),
+// while storage + first-aid are BOOLEANS (negative = false).
+//
+// One option also has to be ADDED: fv_building_elevator_working was the single
+// controller missing a negative path — its options were Yes/No/Partially with
+// no way to say the building has no elevator at all. We add 'No elevator' so
+// the accessibility door-width question can branch off it.
+const BRANCHING_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // Elevator controller (Task 5): add the missing "no elevator" path so the
+  // door-width follow-up has something truthful to branch on. Controller only —
+  // no visible_when (it controls others; nothing controls it).
+  fv_building_elevator_working: { options: ['Yes', 'No', 'Partially', 'No elevator'] },
+
+  // Parking: when there's no parking, suppress spot count, access instructions,
+  // the exact spot number, and the spot photo. Controller is a select whose
+  // negative option is 'None'. The photo was injected required:true (E2) — with
+  // no parking it's hidden, so relax it to optional or it would block the ring.
+  fv_parking_dedicated_spots: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_parking_access_instructions: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_parking_spot_number: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_photo_parking_spot: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' }, required: false },
+
+  // Luggage storage: no point asking where storage is / how to access it when
+  // there is no on-site storage. Controller fv_storage_onsite_check is a boolean.
+  fv_storage_access_instructions: { visible_when: { question: 'fv_storage_onsite_check', equals: true } },
+  fv_storage_location: { visible_when: { question: 'fv_storage_onsite_check', equals: true } },
+
+  // Safety: location / service-date follow-ups only matter when the device is
+  // present. Extinguisher + smoke-detector presence are selects with a 'No'
+  // option ('Common area only' / 'Bedrooms only' etc. still mean present, so we
+  // branch on not_equals:'No', not equals a specific yes). First-aid presence
+  // is a boolean, so it branches on equals:true.
+  fv_fire_extinguisher_location: { visible_when: { question: 'fv_fire_extinguisher_present', not_equals: 'No' } },
+  fv_fire_extinguisher_service_date: { visible_when: { question: 'fv_fire_extinguisher_present', not_equals: 'No' } },
+  fv_smoke_detector_working: { visible_when: { question: 'fv_smoke_detector_present', not_equals: 'No' } },
+  fv_first_aid_location: { visible_when: { question: 'fv_first_aid_present', equals: true } },
+
+  // Accessibility: unit door widths (wheelchair access) are only meaningful when
+  // the building actually has an elevator — a walk-up has no step-free path
+  // regardless of door width. Branch off the 'No elevator' option added above.
+  fv_accessibility_unit_door_widths: { visible_when: { question: 'fv_building_elevator_working', not_equals: 'No elevator' } },
+};
+
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
+      // Two override passes: BUCKET2_OVERRIDES (Phase E) first, then the Phase F
+      // branching predicates. Both are slug-keyed shallow merges and operate on
+      // disjoint fields for shared slugs (e.g. fv_photo_parking_spot's anchor_to
+      // from injection survives; F only touches required + visible_when), so the
+      // order is incidental — F running second just keeps the two concerns
+      // readable as separate maps.
       overrideQuestions(
-        injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-        BUCKET2_OVERRIDES,
+        overrideQuestions(
+          injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+          BUCKET2_OVERRIDES,
+        ),
+        BRANCHING_OVERRIDES,
       ),
     ),
   ),

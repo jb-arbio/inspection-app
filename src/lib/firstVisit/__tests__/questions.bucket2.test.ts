@@ -38,10 +38,13 @@ describe('Phase E — bucket-2 config fixes', () => {
     expect(q.scope).toBe('location');
     expect(q.phase_id).toBe('3');
   });
-  it('E2: fv_photo_parking_spot is a required file anchored to fv_parking_dedicated_spots', () => {
+  it('E2: fv_photo_parking_spot is a file anchored to fv_parking_dedicated_spots', () => {
     const q = one('fv_photo_parking_spot');
     expect(q.type).toBe('file');
-    expect(q.required).toBe(true);
+    // Injected required:true by E2, then relaxed to optional by the Phase F
+    // branching override (it's hidden when there's no parking, so it must not
+    // be a hard scope-level requirement). See questions.branching.test.ts.
+    expect(q.required).toBe(false);
     expect(q.label).toBe('Photo of the parking spot');
     expect(q.anchor_to).toBe('fv_parking_dedicated_spots');
     expect(q.scope).toBe('location');

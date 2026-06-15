@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeProgressFromAnswers, requiredVisible } from '../progress';
-import { questionsForScope, isScopeLevelRequired } from '../questions';
+import { questionsForScope, isScopeLevelRequired, isVisible } from '../questions';
 import type { FirstVisitQuestion } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
@@ -50,10 +50,16 @@ function makeAnswer(
 }
 
 function requiredSlugs(scope: HubScope): string[] {
-  // Scope-level required = required AND not a repeater member (mirrors the
-  // production denominator in computeProgressFromAnswers).
+  // Scope-level required = required AND not a repeater member AND currently
+  // visible (mirrors the production denominator in computeProgressFromAnswers,
+  // which runs questions through requiredVisible). With no answers supplied,
+  // questions gated by an `equals`-style visible_when rule (e.g. luggage-storage
+  // details, gated on the boolean fv_storage_onsite_check) are hidden and so do
+  // not count — same as the real ring. We pass an empty answer map to match the
+  // empty-answers callers below.
+  const noAnswers = new Map<string, unknown>();
   return questionsForScope(scope)
-    .filter(isScopeLevelRequired)
+    .filter((q) => isScopeLevelRequired(q) && isVisible(q.visible_when, noAnswers))
     .map((q) => q.slug);
 }
 
