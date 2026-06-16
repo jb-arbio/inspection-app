@@ -46,3 +46,41 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(req: Request) {
+  const auth = await getHubRouteContext(getHubSupabase());
+  if (!auth) return NextResponse.json({ error: 'unauth' }, { status: 401 });
+  const { supabase } = auth;
+
+  const id = new URL(req.url).searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'missing-id' }, { status: 400 });
+
+  // Look up the row first so we can also remove the underlying storage object.
+  const { data: row, error: selErr } = await supabase
+    .from('first_visit_media')
+    .select('kind, storage_path')
+    .eq('id', id)
+    .maybeSingle();
+  if (selErr) return NextResponse.json({ error: selErr.message }, { status: 500 });
+
+  if (row) {
+    const BUCKETS: Record<string, string> = {
+      photo: 'first-visit-photos',
+      video: 'first-visit-videos',
+      audio: 'first-visit-audio',
+    };
+    const bucket = BUCKETS[row.kind];
+    if (bucket && row.storage_path) {
+      // Best-effort storage cleanup; a missing object should not block the
+      // metadata delete (the job must be able to succeed and drain).
+      await supabase.storage.from(bucket).remove([row.storage_path]);
+    }
+  }
+
+  const { error } = await supabase
+    .from('first_visit_media')
+    .delete()
+    .eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

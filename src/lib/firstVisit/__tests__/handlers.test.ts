@@ -35,6 +35,26 @@ describe('handlers', () => {
     expect(body.step_index).toBe(2);
   });
 
+  it('media_delete DELETEs /api/first-visit/media?id=', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }) as never,
+    );
+    const handlers = createHandlers();
+    await handlers.media_delete({ id: 'm1' });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/first-visit/media?id=m1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('media_delete throws on non-200 so outbox retains the job', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('boom', { status: 500 }) as never,
+    );
+    const handlers = createHandlers();
+    await expect(handlers.media_delete({ id: 'm1' })).rejects.toThrow();
+  });
+
   it('omits step_index when null or undefined', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

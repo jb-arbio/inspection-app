@@ -7,6 +7,7 @@ import {
   isScopeLevelRequired,
   buildAnchorMap,
   filterOutAnchored,
+  isVisible,
   type FirstVisitQuestion,
 } from '@/lib/firstVisit/questions';
 import { RepeaterStub } from '@/components/firstVisit/PrefilledField';
@@ -19,10 +20,13 @@ import { localDb, type LocalAnswer } from '@/lib/firstVisit/db';
 import { enqueue } from '@/lib/firstVisit/sync';
 import {
   resolveScopeId,
+  scopeLabel,
   type HubScope,
   type InspectionScopeContext,
 } from '@/lib/firstVisit/resolveScope';
 import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
+import { repeaterGroupMeta } from '@/lib/firstVisit/repeaterGroups';
+import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
 
 // A target the survey is rendering for. The deal-scoped visit root is a
@@ -273,6 +277,50 @@ export function UnitSurvey({
 
   const scopeId = resolveScopeId(scope, ctx) ?? undefined;
 
+  // Conditional branching (visible_when). Map every single-instance answer's
+  // controlling-question slug → its current value so isVisible() can evaluate a
+  // dependent's rule. Rebuilt each render from the live answers map. Repeater
+  // (step-indexed) answers are excluded — branching controllers are
+  // single-instance questions.
+  const valueByKey = useMemo(() => {
+    const m = new Map<string, unknown>();
+    for (const a of Object.values(answers)) {
+      if (a.target_id !== target.id) continue;
+      if (a.step_index != null) continue;
+      m.set(a.question_key, a.value);
+    }
+    return m;
+  }, [answers, target.id]);
+
+  // Task 4: when a controller answer changes such that a previously-answered
+  // dependent becomes hidden, clear the dependent's stored value so stale data
+  // is never submitted. Self-healing: keyed on the answers map, so it fires no
+  // matter which path wrote the controller. Reuses the existing onChange autosave
+  // path (Dexie put + enqueue) by writing value:null for each hidden, non-empty
+  // dependent across the whole scope (not just the visible phase).
+  const allScopeQuestions = useMemo(() => {
+    const inPhases = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
+    return inPhases;
+  }, [scope, phaseIds]);
+  useEffect(() => {
+    const toClear: FirstVisitQuestion[] = [];
+    for (const q of allScopeQuestions) {
+      if (!q.visible_when) continue;
+      if (isVisible(q.visible_when, valueByKey)) continue;
+      // Hidden now. Clear only if it currently holds a value.
+      const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
+      const v = answers[key]?.value;
+      if (v === null || v === undefined || v === '') continue;
+      toClear.push(q);
+    }
+    if (toClear.length === 0) return;
+    for (const q of toClear) {
+      void onChange(q, { value: null, wasAcceptedAsIs: false });
+    }
+    // onChange is stable enough for this purpose; depending on it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueByKey, allScopeQuestions, answers, target.id]);
+
   // Progress across the whole scope: required answered / required total.
   // Anchored file-questions render inside another phase but still count
   // toward the anchor's phase progress (they no longer have a phase of their
@@ -283,13 +331,15 @@ export function UnitSurvey({
   );
   const requiredStats = useMemo(() => {
     const inPhases = phases.flatMap((p) => p.questions);
-    const required = [...inPhases, ...allAnchoredInScope].filter(isScopeLevelRequired);
+    // Required AND currently visible: a hidden required dependent must not keep
+    // the ring from reaching 100% (mirrors progress.ts requiredVisible).
+    const required = requiredVisible([...inPhases, ...allAnchoredInScope], valueByKey);
     const done = required.filter((q) => {
       const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
       return isAnswered(answers[key]?.value);
     }).length;
     return { done, total: required.length };
-  }, [phases, allAnchoredInScope, answers, target.id]);
+  }, [phases, allAnchoredInScope, answers, target.id, valueByKey]);
 
   // Index of the next phase that has a required, unanswered question, searching
   // from currentIdx + 1 forward, then wrapping to 0..currentIdx. Returns null
@@ -312,8 +362,9 @@ export function UnitSurvey({
     const phaseHasIncomplete = (p: (typeof phases)[number]) => {
       const own = p.questions;
       const anchored = anchoredByAnchorPhase.get(p.id) ?? [];
-      return [...own, ...anchored].some((q) => {
-        if (!isScopeLevelRequired(q)) return false;
+      // Only visible required questions block completion — a hidden required
+      // dependent must not make a phase look perpetually incomplete.
+      return requiredVisible([...own, ...anchored], valueByKey).some((q) => {
         const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
         return !isAnswered(answers[key]?.value);
       });
@@ -325,7 +376,7 @@ export function UnitSurvey({
       if (phaseHasIncomplete(phases[i])) return i;
     }
     return null;
-  }, [phases, anchoredByAnchorPhase, answers, target.id, currentIdx]);
+  }, [phases, anchoredByAnchorPhase, answers, target.id, currentIdx, valueByKey]);
 
   if (phases.length === 0) {
     return (
@@ -443,22 +494,37 @@ export function UnitSurvey({
       </div>
 
       <section key={phase.id} ref={sectionRef} className="mt-4 scroll-mt-20">
-        <div className="text-sm font-medium uppercase tracking-wide text-gray-500">
-          {phase.label}
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium uppercase tracking-wide text-gray-500">
+            {phase.label}
+          </div>
+          <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600">
+            {scopeLabel(scope)}
+          </span>
         </div>
         <div className="mt-2 flex flex-col gap-3">
           {buildRenderPlan(phase.questions).map((node) => {
             if (node.kind === 'group') {
+              // A group of branching dependents is unusual, but if every
+              // question in the block is hidden, skip the whole block.
+              const visibleGroupQs = node.questions.filter((gq) =>
+                isVisible(gq.visible_when, valueByKey),
+              );
+              if (visibleGroupQs.length === 0) return null;
               // Anchored children for any question in the group are rendered
               // after the group block (groups don't slice file-questions
               // mid-block; the StepGroup owns its own layout).
               const groupAnchored = node.questions.flatMap(
                 (gq) => anchorMap.get(gq.slug) ?? [],
               );
+              const groupMeta = repeaterGroupMeta(node.groupId);
               return (
                 <div key={`group-${node.groupId}`} className="flex flex-col gap-3">
                   <StepGroup
                     groupId={node.groupId}
+                    groupLabel={groupMeta.title}
+                    intro={groupMeta.intro}
+                    itemNoun={groupMeta.itemNoun}
                     questions={node.questions}
                     inspectionId={inspectionId}
                     targetId={target.id}
@@ -484,6 +550,10 @@ export function UnitSurvey({
             }
 
             const q = node.question;
+            // Conditional branching: skip a question whose visible_when rule is
+            // not satisfied. Its anchored media children render inside this
+            // branch, so they are skipped along with it.
+            if (!isVisible(q.visible_when, valueByKey)) return null;
             const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
             const answer = answers[key];
             const anchored = anchorMap.get(q.slug) ?? [];

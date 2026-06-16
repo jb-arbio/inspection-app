@@ -9,6 +9,10 @@ import { FINDING_RESOLUTION_OPTIONS } from './findingsResolution';
 export type FieldType =
   | 'text'
   | 'select'
+  // Segmented single-select: a tap-friendly row of buttons (one per `options`
+  // entry) storing the chosen option string. Same data shape as 'select', just
+  // a mobile-first rendering consistent with the boolean Yes/No buttons.
+  | 'scale'
   | 'boolean'
   | 'number'
   | 'date'
@@ -76,6 +80,12 @@ export type FirstVisitQuestion = {
   // media anchoring). Renderer in WS-B does not act on this; it is here so
   // the type is ready for WS-F.
   anchor_to?: string;
+  // Declarative visibility: this question renders, counts toward required, and
+  // keeps its value ONLY when the controlling question's answer satisfies the
+  // predicate. Used to suppress dependent questions on "No/None/N/A" answers.
+  // `question` is the controlling question's slug. Unanswered controller:
+  // equals/in → not satisfied (hidden); not_equals/not_in → not excluded (visible).
+  visible_when?: VisibleWhen;
 };
 
 export type FirstVisitPhase = {
@@ -127,6 +137,18 @@ export const DROPPED_SLUGS = new Set<string>([
   'fv_maintenance_details',
   // Phase 9e appliance condition — repeater becomes pure inventory
   'appliance.status', 'appliance.statusNote',
+  // Task 17 — fuse-box media consolidated into one video (fv_video_fusebox).
+  // The JSON-sourced photo is now redundant. (The injected
+  // fv_photo_fusebox_location is removed at its injection site instead — see
+  // injectBucket2Questions — because DROPPED_SLUGS runs before injection.)
+  'fv_photo_fusebox',
+  // Task 18 — consumables block has no on-site use; drop the whole group.
+  'consumable.name', 'consumable.meets_standard', 'consumable.notes', 'consumable.photo',
+  // Task 20 — unit identity overlap. "Location of unit in building" (free text,
+  // e.g. "second floor, east wing") just restates the structured "Floor of unit"
+  // (fv_unit_floor_number) we keep. Per the feedback we cut the redundant
+  // free-text rather than maintain two near-identical fields.
+  'fv_unit_location_in_building',
 ]);
 
 // Fuse-box proposed duplicates: drop only the status==='proposed' copies.
@@ -402,25 +424,90 @@ function injectBucket2Questions(phases: FirstVisitPhase[]): FirstVisitPhase[] {
       ];
       return { ...p, questions: [...p.questions, ...additions] };
     }
-    // E6 — fuse box media, infrastructure phase (id '5'), location scope.
+    // E6 / Task 17 — fuse box media, infrastructure phase (id '5'), location
+    // scope. Field feedback: three separate fuse-box media requests (location
+    // photo, reset video, photo) collapse into ONE video covering both the
+    // location and the reset/operation. This is now the single required
+    // fuse-box capture; the JSON fv_photo_fusebox is dropped via DROPPED_SLUGS,
+    // and the previously-injected fv_photo_fusebox_location is removed here.
     if (p.id === '5') {
       const additions: FirstVisitQuestion[] = [
         makeBucket2Question(p, 'location', {
           slug: 'fv_video_fusebox',
-          label: 'Fuse box video (reset/operation)',
-          type: 'file',
-          required: false,
-          anchor_to: 'fv_fusebox_location',
-        }),
-        makeBucket2Question(p, 'location', {
-          slug: 'fv_photo_fusebox_location',
-          label: 'Photo of fuse box location',
+          label: 'Fuse box video (location + reset)',
           type: 'file',
           required: true,
           anchor_to: 'fv_fusebox_location',
         }),
+        // Task 20 — fire exit route is hard to describe in writing. Replace the
+        // free-text-as-primary capture with a required video walkthrough; the
+        // text field (fv_fire_exit_primary) is relaxed to optional notes and
+        // this video anchors under it. Same phase/scope as fv_fire_exit_primary.
+        makeBucket2Question(p, 'location', {
+          slug: 'fv_video_fire_exit',
+          label: 'Fire exit route (video walkthrough)',
+          type: 'file',
+          required: true,
+          anchor_to: 'fv_fire_exit_primary',
+        }),
       ];
       return { ...p, questions: [...p.questions, ...additions] };
+    }
+    // Task 18.3 — furnishing-scope controller, unit physical measurements phase
+    // (id '9c'), unit_category scope. The window/ceiling measurement photo and
+    // the ceiling-height measurement only matter when Arbio furnishes/equips the
+    // unit (curtain ordering). This boolean controller gates both via
+    // visible_when (see FURNISHING_SCOPE_OVERRIDES). It sits in 9c so it is
+    // answered before/alongside fv_ceiling_height_m (same phase) and remains in
+    // scope for fv_photo_window_ceiling (phase 9h, same unit_category scope).
+    if (p.id === '9c') {
+      const controller = makeBucket2Question(p, 'unit_category', {
+        slug: 'fv_furnishing_by_arbio',
+        label: 'Will Arbio furnish/equip this unit?',
+        type: 'boolean',
+        required: true,
+      });
+      // Prepend so the controller renders ahead of the gated measurement.
+      return { ...p, questions: [controller, ...p.questions] };
+    }
+    // Task 19.1 — direct capacity fields, unit capacity phase (id '9b'),
+    // unit_category scope. Field feedback: the old "Actual capacity / bed setup
+    // if mismatch" + "Capacity comments (only if mismatch)" pair asked the
+    // visitor to compare against an owner claim they can't see on-site. Replace
+    // that framing with two direct, always-collected numbers; the legacy
+    // free-text fields stay as optional notes (relaxed + relabelled in the
+    // override maps below).
+    if (p.id === '9b') {
+      const additions: FirstVisitQuestion[] = [
+        makeBucket2Question(p, 'unit_category', {
+          slug: 'fv_capacity_base',
+          label: 'Base capacity (standard beds)',
+          type: 'number',
+          required: true,
+        }),
+        makeBucket2Question(p, 'unit_category', {
+          slug: 'fv_capacity_max',
+          label: 'Max capacity (incl. sofa beds/extra)',
+          type: 'number',
+          required: true,
+        }),
+      ];
+      // Prepend so the direct fields lead the phase, ahead of the free-text notes.
+      return { ...p, questions: [...additions, ...p.questions] };
+    }
+    // Task 19.2 — Wi-Fi presence controller, WiFi phase (id '7'), location
+    // scope. New units may have no Wi-Fi installed yet; the speed-test numbers
+    // shouldn't be required in that case. This boolean gates the two speed
+    // questions via visible_when (see TASK19_OVERRIDES).
+    if (p.id === '7') {
+      const controller = makeBucket2Question(p, 'location', {
+        slug: 'fv_wifi_present',
+        label: 'Wi-Fi available?',
+        type: 'boolean',
+        required: true,
+      });
+      // Prepend so the controller renders ahead of the gated speed tests.
+      return { ...p, questions: [controller, ...p.questions] };
     }
     return p;
   });
@@ -472,16 +559,195 @@ const BUCKET2_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
   fv_video_trash_location: { anchor_to: 'fv_trash_container_location' },
   fv_photo_storage_room: { anchor_to: 'fv_storage_location' },
   fv_video_parking_access: { anchor_to: 'fv_parking_access_instructions' },
-  fv_photo_fusebox: { anchor_to: 'fv_fusebox_location' },
+  // (fv_photo_fusebox anchor override removed: Task 17 drops that question.)
   fv_video_checkin_walkthrough: { anchor_to: 'fv_step_name' },
+};
+
+// --- Phase F: conditional branching (field-test feedback 2026-06-11) ---
+// Inspectors reported the survey kept asking for details that make no sense
+// once a section is answered "no": a unit with no parking still asked for spot
+// count / access instructions / a spot photo; the luggage-storage block kept
+// prompting for storage location when there was no storage; the safety section
+// asked where the fire extinguisher / smoke detector is even after marking it
+// absent. Each dependent below gets a `visible_when` predicate so it renders,
+// counts toward required, and keeps its value ONLY when the controlling answer
+// warrants it. Predicates are matched to the REAL controller type (Task 0):
+// the parking/safety presence questions are SELECTS (negative = 'None'/'No'),
+// while storage + first-aid are BOOLEANS (negative = false).
+//
+// One option also has to be ADDED: fv_building_elevator_working was the single
+// controller missing a negative path — its options were Yes/No/Partially with
+// no way to say the building has no elevator at all. We add 'No elevator' so
+// the accessibility door-width question can branch off it.
+const BRANCHING_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // Elevator controller (Task 5): add the missing "no elevator" path so the
+  // door-width follow-up has something truthful to branch on. Controller only —
+  // no visible_when (it controls others; nothing controls it).
+  fv_building_elevator_working: { options: ['Yes', 'No', 'Partially', 'No elevator'] },
+
+  // Parking: when there's no parking, suppress spot count, access instructions,
+  // the exact spot number, and the spot photo. Controller is a select whose
+  // negative option is 'None'. The photo was injected required:true (E2) — with
+  // no parking it's hidden, so relax it to optional or it would block the ring.
+  fv_parking_dedicated_spots: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_parking_access_instructions: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_parking_spot_number: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' } },
+  fv_photo_parking_spot: { visible_when: { question: 'fv_parking_actual_type', not_equals: 'None' }, required: false },
+
+  // Luggage storage: no point asking where storage is / how to access it when
+  // there is no on-site storage. Controller fv_storage_onsite_check is a boolean.
+  fv_storage_access_instructions: { visible_when: { question: 'fv_storage_onsite_check', equals: true } },
+  fv_storage_location: { visible_when: { question: 'fv_storage_onsite_check', equals: true } },
+
+  // Safety: location / service-date follow-ups only matter when the device is
+  // present. Extinguisher + smoke-detector presence are selects with a 'No'
+  // option ('Common area only' / 'Bedrooms only' etc. still mean present, so we
+  // branch on not_equals:'No', not equals a specific yes). First-aid presence
+  // is a boolean, so it branches on equals:true.
+  fv_fire_extinguisher_location: { visible_when: { question: 'fv_fire_extinguisher_present', not_equals: 'No' } },
+  fv_fire_extinguisher_service_date: { visible_when: { question: 'fv_fire_extinguisher_present', not_equals: 'No' } },
+  fv_smoke_detector_working: { visible_when: { question: 'fv_smoke_detector_present', not_equals: 'No' } },
+  fv_first_aid_location: { visible_when: { question: 'fv_first_aid_present', equals: true } },
+
+  // Accessibility: unit door widths (wheelchair access) are only meaningful when
+  // the building actually has an elevator — a walk-up has no step-free path
+  // regardless of door width. Branch off the 'No elevator' option added above.
+  fv_accessibility_unit_door_widths: { visible_when: { question: 'fv_building_elevator_working', not_equals: 'No elevator' } },
+};
+
+// --- Phase G: field-type fixes (field feedback 2026-06-11) ---
+// Two rendering changes the inspectors asked for. Kept in their own map (not
+// folded into BRANCHING_OVERRIDES) so the "make X a scale / multi-select"
+// intent reads as a distinct concern from the conditional-branching predicates.
+const FIELD_TYPE_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // Hallway cleanliness was a yes/no, which couldn't capture "mostly fine but
+  // a bit tired". Promote it to the same Excellent→Poor scale the building-state
+  // question already uses, so the two condition fields read consistently. The
+  // option list is duplicated verbatim from fv_building_state in the JSON.
+  fv_building_hallways_clean: {
+    type: 'scale',
+    options: ['Excellent', 'Good', 'Acceptable', 'Needs attention', 'Poor'],
+  },
+  // Guest-type suitability is genuinely multi-valued (a unit can suit couples
+  // AND business travellers). Flip to the existing multi-select chip renderer;
+  // options stay exactly as the JSON defines them.
+  fv_best_for_guest_type: { multi_select: true },
+};
+
+// --- Content rework (field feedback, Tasks 17 & 18) ---
+// Override-driven content changes that aren't drops or injections:
+//   - Trash dropdown loses 'Inside apartment' (containers live outside the unit;
+//     the option produced misleading data).
+//   - The two furnishing-only measurements are gated on fv_furnishing_by_arbio
+//     (injected above), so they vanish when Arbio does not equip the unit.
+const CONTENT_REWORK_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  fv_trash_container_location: {
+    options: ['Backyard', 'Courtyard', 'Basement', 'Ground floor room', 'Street'],
+  },
+  fv_photo_window_ceiling: {
+    visible_when: { question: 'fv_furnishing_by_arbio', equals: true },
+  },
+  fv_ceiling_height_m: {
+    visible_when: { question: 'fv_furnishing_by_arbio', equals: true },
+  },
+};
+
+// --- Task 19: reframe mismatch / owner-comparison / new-property paths ---
+// Field feedback (2026-06-11): several questions were framed around an
+// owner-supplied baseline the on-site visitor can't see ("if mismatch", "only
+// if meaningfully different from owner claim"), and others made no sense for a
+// brand-new unit with nothing set up yet. This map (a) relaxes + neutralizes
+// the legacy capacity free-text, (b) gates Wi-Fi speeds on a presence boolean,
+// (c) gates cleaning/laundry detail on their respective "Not yet set up"
+// controllers, and (d) strips owner-comparison framing from fv_view_comments.
+// Maintenance detail gating is N/A — fv_maintenance_details and
+// fv_maintenance_cost_estimate_eur are already in DROPPED_SLUGS (Findings repeater).
+const TASK19_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  // 19.1 + 19.5 — legacy capacity free-text: keep as optional notes, drop the
+  // owner-comparison "if mismatch" framing now that fv_capacity_base/_max carry
+  // the real numbers. (required was already false in the JSON; set explicitly.)
+  fv_capacity_actual_setup: {
+    label: 'Capacity / bed setup notes',
+    description: null,
+    required: false,
+  },
+  fv_capacity_comments: {
+    label: 'Capacity comments',
+    description: null,
+    required: false,
+  },
+
+  // 19.2 — Wi-Fi speeds only required when Wi-Fi is present.
+  fv_wifi_download_speed_mbps: { visible_when: { question: 'fv_wifi_present', equals: true } },
+  fv_wifi_upload_speed_mbps: { visible_when: { question: 'fv_wifi_present', equals: true } },
+
+  // 19.3 — cleaning detail: a "Not yet set up" property has no provider and no
+  // existing cleaning to take over, so hide the provider name + takeover question.
+  fv_cleaning_provider_name: { visible_when: { question: 'fv_cleaning_setup', not_equals: 'Not yet set up' } },
+  fv_cleaning_takeover_possible: { visible_when: { question: 'fv_cleaning_setup', not_equals: 'Not yet set up' } },
+  // Laundry detail gates on the laundry controller (its own 'Not yet set up'
+  // option), not the cleaning one — they're independent setups.
+  fv_laundry_provider_name: { visible_when: { question: 'fv_laundry_setup', not_equals: 'Not yet set up' } },
+  fv_laundry_delivery_frequency: { visible_when: { question: 'fv_laundry_setup', not_equals: 'Not yet set up' } },
+
+  // 19.5 — owner-comparison framing: the visitor can't see the owner's claim,
+  // so reframe as a plain, always-optional comments field.
+  fv_view_comments: {
+    label: 'View comments',
+    description: null,
+  },
+};
+
+// --- Task 20: unit identity / fire-exit format / recommendation summary ---
+// Field feedback (2026-06-11):
+//   - Fire exit: "unclear how to describe an exit route in writing." The
+//     required video (fv_video_fire_exit, injected above) is now the primary
+//     capture, so the free-text becomes optional notes.
+//   - Recommendation summary: purpose unclear + reconsider mandatory. Relax to
+//     optional and rewrite the label/description to say exactly what to write.
+// (Unit-identity overlap is handled by dropping fv_unit_location_in_building via
+// DROPPED_SLUGS; property naming is N/A — the only name field, fv_visit_deal_name,
+// is already hidden via HIDDEN_DEAL_STAMPING_SLUGS.)
+const TASK20_OVERRIDES: Record<string, Partial<FirstVisitQuestion>> = {
+  fv_fire_exit_primary: {
+    label: 'Fire exit route notes (optional)',
+    required: false,
+  },
+  fv_readiness_recommendation_summary: {
+    label: 'Summary recommendation',
+    description:
+      'One-line recommendation: go-live as planned, go-live with conditions, or actions needed before go-live.',
+    required: false,
+  },
 };
 
 export const PHASES: FirstVisitPhase[] = stripVerifyWord(
   stripOperationalDescriptions(
     hideDealStampingQuestions(
+      // Two override passes: BUCKET2_OVERRIDES (Phase E) first, then the Phase F
+      // branching predicates. Both are slug-keyed shallow merges and operate on
+      // disjoint fields for shared slugs (e.g. fv_photo_parking_spot's anchor_to
+      // from injection survives; F only touches required + visible_when), so the
+      // order is incidental — F running second just keeps the two concerns
+      // readable as separate maps.
       overrideQuestions(
-        injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
-        BUCKET2_OVERRIDES,
+        overrideQuestions(
+          overrideQuestions(
+            overrideQuestions(
+              overrideQuestions(
+                overrideQuestions(
+                  injectBucket2Questions(injectFindings(dropQuestions(dedupePhases(RAW.phases)))),
+                  BUCKET2_OVERRIDES,
+                ),
+                BRANCHING_OVERRIDES,
+              ),
+              FIELD_TYPE_OVERRIDES,
+            ),
+            CONTENT_REWORK_OVERRIDES,
+          ),
+          TASK19_OVERRIDES,
+        ),
+        TASK20_OVERRIDES,
       ),
     ),
   ),
@@ -550,6 +816,60 @@ export function groupIdFor(q: FirstVisitQuestion): string | null {
 // UnitSurvey.tsx.
 export function isScopeLevelRequired(q: FirstVisitQuestion): boolean {
   return q.required && !q.group_id;
+}
+
+// Declarative conditional-branching predicate. A question's `visible_when` rule
+// names a controlling question (by slug) and a condition over that question's
+// answer; `isVisible` decides whether the dependent question should render,
+// count toward required, and keep its value. This is a pure predicate — it does
+// not touch the config-transform pipeline above. Later tasks call it from
+// progress.ts (ring) and UnitSurvey.tsx (renderer).
+//
+// `answersByKey` maps controlling question slug → its current answer value
+// (string, boolean, or string[] for multi-selects). Unanswered controllers:
+// equals/in are NOT satisfied (hidden); not_equals/not_in are NOT excluded
+// (visible). Comparisons are strict (`===`), so booleans compare by identity.
+export type VisibleWhen = {
+  question: string;
+  equals?: unknown;
+  not_equals?: unknown;
+  in?: unknown[];
+  not_in?: unknown[];
+};
+
+// A single answer matches `candidate` if it equals it, or — for multi-select
+// answers (arrays) — if any selected option equals it.
+function matchesValue(answer: unknown, candidate: unknown): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => v === candidate);
+  return answer === candidate;
+}
+// As above but against a list: true if the answer (or any selected option) is
+// in `list`.
+function inList(answer: unknown, list: unknown[]): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => list.includes(v));
+  return list.includes(answer);
+}
+
+export function isVisible(
+  rule: VisibleWhen | undefined,
+  answersByKey: Map<string, unknown>,
+): boolean {
+  if (!rule) return true;
+  const answered = answersByKey.has(rule.question);
+  const a = answersByKey.get(rule.question);
+  if ('equals' in rule && rule.equals !== undefined) {
+    return answered && matchesValue(a, rule.equals);
+  }
+  if ('in' in rule && rule.in) {
+    return answered && inList(a, rule.in);
+  }
+  if ('not_equals' in rule && rule.not_equals !== undefined) {
+    return !answered || !matchesValue(a, rule.not_equals);
+  }
+  if ('not_in' in rule && rule.not_in) {
+    return !answered || !inList(a, rule.not_in);
+  }
+  return true;
 }
 
 // WS-F media anchoring: photo/video file questions opt into rendering inline

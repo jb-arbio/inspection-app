@@ -1,8 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { computeProgressFromAnswers } from '../progress';
-import { questionsForScope, isScopeLevelRequired } from '../questions';
+import { computeProgressFromAnswers, requiredVisible } from '../progress';
+import { questionsForScope, isScopeLevelRequired, isVisible } from '../questions';
+import type { FirstVisitQuestion } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
+
+// Sane FirstVisitQuestion defaults; spread a partial to override only the
+// fields a given test cares about.
+function mkQ(overrides: Partial<FirstVisitQuestion> = {}): FirstVisitQuestion {
+  return {
+    slug: 'fv_q',
+    label: 'Q',
+    description: null,
+    scope: 'location',
+    mode: 'data',
+    type: 'text',
+    options: [],
+    required: false,
+    repeater: false,
+    pms_target: null,
+    status: 'existing',
+    verdict: null,
+    notes: null,
+    phase_id: '1',
+    phase_label: 'Phase 1',
+    ...overrides,
+  };
+}
 
 function makeAnswer(
   question_key: string,
@@ -26,10 +50,16 @@ function makeAnswer(
 }
 
 function requiredSlugs(scope: HubScope): string[] {
-  // Scope-level required = required AND not a repeater member (mirrors the
-  // production denominator in computeProgressFromAnswers).
+  // Scope-level required = required AND not a repeater member AND currently
+  // visible (mirrors the production denominator in computeProgressFromAnswers,
+  // which runs questions through requiredVisible). With no answers supplied,
+  // questions gated by an `equals`-style visible_when rule (e.g. luggage-storage
+  // details, gated on the boolean fv_storage_onsite_check) are hidden and so do
+  // not count — same as the real ring. We pass an empty answer map to match the
+  // empty-answers callers below.
+  const noAnswers = new Map<string, unknown>();
   return questionsForScope(scope)
-    .filter(isScopeLevelRequired)
+    .filter((q) => isScopeLevelRequired(q) && isVisible(q.visible_when, noAnswers))
     .map((q) => q.slug);
 }
 
@@ -143,10 +173,26 @@ describe('computeProgressFromAnswers', () => {
       ).toBe(false);
     }
 
-    // And the total denominator must exclude every repeater member.
+    // And the total denominator must exclude every repeater member. With empty
+    // answers it must also exclude questions hidden by an unsatisfied
+    // visible_when (e.g. the furnishing-gated measurements gate on
+    // fv_furnishing_by_arbio:equals true, which is unsatisfied when unanswered).
     const { total } = computeProgressFromAnswers('unit_category', []);
-    const nonRepeaterRequired = uc.filter((q) => q.required && !q.group_id).length;
-    expect(total).toBe(nonRepeaterRequired);
+    const nonRepeaterRequiredVisible = uc.filter(
+      (q) => q.required && !q.group_id && isVisible(q.visible_when, new Map()),
+    ).length;
+    expect(total).toBe(nonRepeaterRequiredVisible);
+  });
+
+  it('hidden (visible_when unsatisfied) required questions drop out of total', () => {
+    const qs = [
+      mkQ({ slug: 'fv_parking_available', type: 'select', required: true }),
+      mkQ({ slug: 'fv_parking_spots', type: 'number', required: true,
+            visible_when: { question: 'fv_parking_available', equals: 'Yes' } }),
+    ];
+    expect(requiredVisible(qs, new Map([['fv_parking_available', 'No']])).map((q) => q.slug))
+      .toEqual(['fv_parking_available']);
+    expect(requiredVisible(qs, new Map([['fv_parking_available', 'Yes']])).length).toBe(2);
   });
 });
 

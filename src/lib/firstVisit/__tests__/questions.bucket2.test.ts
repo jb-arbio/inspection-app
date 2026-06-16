@@ -38,10 +38,13 @@ describe('Phase E — bucket-2 config fixes', () => {
     expect(q.scope).toBe('location');
     expect(q.phase_id).toBe('3');
   });
-  it('E2: fv_photo_parking_spot is a required file anchored to fv_parking_dedicated_spots', () => {
+  it('E2: fv_photo_parking_spot is a file anchored to fv_parking_dedicated_spots', () => {
     const q = one('fv_photo_parking_spot');
     expect(q.type).toBe('file');
-    expect(q.required).toBe(true);
+    // Injected required:true by E2, then relaxed to optional by the Phase F
+    // branching override (it's hidden when there's no parking, so it must not
+    // be a hard scope-level requirement). See questions.branching.test.ts.
+    expect(q.required).toBe(false);
     expect(q.label).toBe('Photo of the parking spot');
     expect(q.anchor_to).toBe('fv_parking_dedicated_spots');
     expect(q.scope).toBe('location');
@@ -78,21 +81,16 @@ describe('Phase E — bucket-2 config fixes', () => {
     expect(comments.required).toBe(false);
   });
 
-  // E6 — fuse box video + location photo.
-  it('E6: fuse box media questions are files anchored to fv_fusebox_location at location scope', () => {
+  // E6 / Task 17 — fuse box media consolidated into a single required video
+  // covering location + reset (see questions.contentRework.test.ts).
+  it('E6: fuse box media is one file anchored to fv_fusebox_location at location scope', () => {
     const video = one('fv_video_fusebox');
-    const photo = one('fv_photo_fusebox_location');
-    for (const q of [video, photo]) {
-      expect(q.type).toBe('file');
-      expect(q.anchor_to).toBe('fv_fusebox_location');
-      expect(q.scope).toBe('location');
-      expect(q.phase_id).toBe('5');
-    }
-    expect(video.label).toBe('Fuse box video (reset/operation)');
-    expect(photo.label).toBe('Photo of fuse box location');
-    // The location photo is mandatory (proof of where the fuse box is); video optional.
-    expect(photo.required).toBe(true);
-    expect(video.required).toBe(false);
+    expect(video.type).toBe('file');
+    expect(video.anchor_to).toBe('fv_fusebox_location');
+    expect(video.scope).toBe('location');
+    expect(video.phase_id).toBe('5');
+    expect(video.label).toBe('Fuse box video (location + reset)');
+    expect(video.required).toBe(true);
   });
 
   // E7 — common areas options appended (existing preserved).
@@ -110,7 +108,8 @@ describe('Phase E — bucket-2 config fixes', () => {
     expect(one('fv_video_trash_location').anchor_to).toBe('fv_trash_container_location');
     expect(one('fv_photo_storage_room').anchor_to).toBe('fv_storage_location');
     expect(one('fv_video_parking_access').anchor_to).toBe('fv_parking_access_instructions');
-    expect(one('fv_photo_fusebox').anchor_to).toBe('fv_fusebox_location');
+    // (fv_photo_fusebox dropped in Task 17; fv_video_fusebox carries the anchor.)
+    expect(one('fv_video_fusebox').anchor_to).toBe('fv_fusebox_location');
     expect(one('fv_video_checkin_walkthrough').anchor_to).toBe('fv_step_name');
   });
 
@@ -128,7 +127,6 @@ describe('Phase E — bucket-2 config fixes', () => {
       'fv_parking_spot_number',
       'fv_photo_parking_spot',
       'fv_video_fusebox',
-      'fv_photo_fusebox_location',
     ]) {
       expect(bySlug(slug).length, slug).toBe(1);
     }

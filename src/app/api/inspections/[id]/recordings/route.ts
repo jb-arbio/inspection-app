@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { resolve } from "path";
-import { readFileSync, existsSync } from "fs";
 import { supabase } from "@/lib/supabase";
 import { randomUUID } from "crypto";
 import OpenAI, { toFile } from "openai";
 import { getAreaRecordingsForBlock } from "@/lib/data";
+import { loadOpenAIKey } from "@/lib/openaiKey";
 
 export async function GET(
   request: Request,
@@ -36,24 +35,6 @@ export async function GET(
   );
 
   return NextResponse.json({ recordings });
-}
-
-function loadOpenAIKey() {
-  if (process.env.OPENAI_API_KEY) return;
-  const cwd = process.cwd();
-  const possiblePaths = [
-    resolve(cwd, ".env.local"),
-    resolve(cwd, "inspection-app", ".env.local"),
-  ];
-  for (const envPath of possiblePaths) {
-    if (!existsSync(envPath)) continue;
-    const content = readFileSync(envPath, "utf-8");
-    const match = content.match(/^OPENAI_API_KEY=(.+)$/m);
-    if (match) {
-      process.env.OPENAI_API_KEY = match[1].trim();
-      return;
-    }
-  }
 }
 
 const AUDIO_BUCKET = "inspection-audio-recordings";

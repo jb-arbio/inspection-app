@@ -14,6 +14,9 @@ import { UnitSurvey, type SurveyTarget } from './UnitSurvey';
 import type { HubScope } from '@/lib/firstVisit/resolveScope';
 import {
   computeProgressFromAnswers,
+  remainingRequiredByTarget,
+  type RemainingGroup,
+  type RemainingTargetInput,
   type ScopeProgress,
 } from '@/lib/firstVisit/progress';
 import { validateUnitIdentifier } from '@/lib/firstVisit/unitIdentifier';
@@ -110,6 +113,11 @@ export default function VisitNavigator({
   const [selected, setSelected] = useState<Selection | null>(null);
   const [adding, setAdding] = useState<null | { kind: 'property' } | { kind: 'unit'; property: LocalTarget }>(null);
   const [renamingUnitId, setRenamingUnitId] = useState<string | null>(null);
+  // Submit flow state: a confirmation dialog that lists what's still open, and
+  // a terminal success state so the inspector knows the visit actually went in.
+  const [submitState, setSubmitState] = useState<'idle' | 'confirming' | 'submitted'>(
+    'idle',
+  );
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
 
@@ -154,21 +162,51 @@ export default function VisitNavigator({
     return computeProgressFromAnswers(scope, own, phaseIds);
   };
 
-  // Count required questions still unanswered across every scope in this
-  // visit: deal-scoped (target_id === inspectionId), each property, each unit.
-  const totalUnansweredRequired = (): number => {
+  // Aggregate completion across every scope in this visit: deal-scoped
+  // (target_id === inspectionId), each property, each unit. This is the
+  // user-facing "X of Y required complete" number — the one the inspector
+  // should care about, NOT the outbox sync backlog.
+  const overallProgress = (): ScopeProgress => {
+    let done = 0;
     let total = 0;
-    const dealProgress = progressFor(inspectionId, 'deal');
-    total += dealProgress.total - dealProgress.done;
+    const add = (p: ScopeProgress) => {
+      done += p.done;
+      total += p.total;
+    };
+    add(progressFor(inspectionId, 'deal'));
     for (const p of properties) {
-      const lp = progressFor(p.id, 'location');
-      total += lp.total - lp.done;
+      add(progressFor(p.id, 'location'));
+      for (const u of unitsOf(p.id)) add(progressFor(u.id, 'unit_category'));
+    }
+    return { done, total };
+  };
+
+  // Build the per-target "what's left" input list for the submit dialog: deal
+  // scope plus every property and unit, each with its own answers. Reuses the
+  // visibility-aware remainingRequiredByTarget helper.
+  const remainingByTarget = (): RemainingGroup[] => {
+    const inputs: RemainingTargetInput[] = [
+      {
+        label: 'Visit details',
+        scope: 'deal',
+        answers: answers.filter((a) => a.target_id === inspectionId),
+      },
+    ];
+    for (const p of properties) {
+      inputs.push({
+        label: p.label || 'Property',
+        scope: 'location',
+        answers: answers.filter((a) => a.target_id === p.id),
+      });
       for (const u of unitsOf(p.id)) {
-        const up = progressFor(u.id, 'unit_category');
-        total += up.total - up.done;
+        inputs.push({
+          label: `${p.label || 'Property'} › ${u.label || 'Unit'}`,
+          scope: 'unit_category',
+          answers: answers.filter((a) => a.target_id === u.id),
+        });
       }
     }
-    return total;
+    return remainingRequiredByTarget(inputs);
   };
 
   const deleteProperty = async (p: LocalTarget) => {
@@ -333,13 +371,8 @@ export default function VisitNavigator({
     setSelected({ kind: 'unit', target: u, property });
   };
 
-  const submit = async () => {
-    const missing = totalUnansweredRequired();
-    const message =
-      missing > 0
-        ? `${missing} required question${missing === 1 ? '' : 's'} still unanswered. Submit anyway?`
-        : 'Submit this visit? You will not be able to edit it after.';
-    if (!confirm(message)) return;
+  const confirmSubmit = async () => {
+    const missing = remainingByTarget().reduce((n, g) => n + g.questions.length, 0);
     track('submit_clicked', { inspection_id: inspectionId, missing_required: missing });
     await localDb.inspections.update(inspectionId, {
       status: 'submitted',
@@ -347,6 +380,7 @@ export default function VisitNavigator({
     });
     await enqueue('submit', { inspection_id: inspectionId });
     syncNow().catch(() => {});
+    setSubmitState('submitted');
   };
 
   // --- Survey view ---------------------------------------------------------
@@ -455,6 +489,24 @@ export default function VisitNavigator({
             ) : !snapshot ? (
               <div className="mt-1 h-3 w-56 animate-pulse rounded bg-gray-100" aria-hidden />
             ) : null}
+            {/* User-facing COMPLETION signal — what's actually filled in across
+                the whole visit. This, not the sync backlog, is the number the
+                inspector should read at a glance. */}
+            {(() => {
+              const op = overallProgress();
+              if (op.total === 0) return null;
+              const allDone = op.done >= op.total;
+              return (
+                <p
+                  className={`mt-1 text-xs font-medium ${
+                    allDone ? 'text-green-700' : 'text-gray-700'
+                  }`}
+                >
+                  {op.done} of {op.total} required complete
+                  {allDone ? ' ✓' : ''}
+                </p>
+              );
+            })()}
           </div>
           <div className="flex shrink-0 items-center gap-2 text-xs">
             <SyncBadge pending={pending} syncing={syncing} />
@@ -609,12 +661,113 @@ export default function VisitNavigator({
       </button>
 
       <button
-        onClick={submit}
+        onClick={() => setSubmitState('confirming')}
         className="mt-6 w-full rounded-md bg-black px-4 py-3 text-white"
       >
         Submit visit
       </button>
+
+      {submitState !== 'idle' ? (
+        <SubmitDialog
+          state={submitState}
+          remaining={remainingByTarget()}
+          onConfirm={confirmSubmit}
+          onCancel={() => setSubmitState('idle')}
+        />
+      ) : null}
     </main>
+  );
+}
+
+// Submit confirmation + success dialog. Before submit it lists the unanswered
+// visible-required questions grouped by target so the inspector knows exactly
+// what's still open (or confirms everything's done). After submit it shows a
+// clear success state so there's no ambiguity about whether it went through.
+function SubmitDialog({
+  state,
+  remaining,
+  onConfirm,
+  onCancel,
+}: {
+  state: 'confirming' | 'submitted';
+  remaining: RemainingGroup[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const missing = remaining.reduce((n, g) => n + g.questions.length, 0);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+    >
+      <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
+        {state === 'submitted' ? (
+          <div className="text-center">
+            <div className="text-2xl">✓</div>
+            <h2 className="mt-2 text-lg font-semibold">Visit submitted</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Your answers are saved and syncing to the hub. You can close this
+              page.
+            </p>
+            <button
+              onClick={onCancel}
+              className="mt-4 w-full rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold">Submit this visit?</h2>
+            {missing === 0 ? (
+              <p className="mt-2 text-sm text-green-700">
+                Everything required is filled in. ✓
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-gray-700">
+                  {missing} required question{missing === 1 ? '' : 's'} still
+                  unanswered. You can submit anyway, but here&apos;s what&apos;s
+                  open:
+                </p>
+                <div className="mt-3 max-h-60 overflow-y-auto rounded-md border border-gray-200">
+                  {remaining.map((g) => (
+                    <div key={g.label} className="border-b border-gray-100 p-3 last:border-b-0">
+                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        {g.label}
+                      </div>
+                      <ul className="mt-1 list-disc pl-5 text-sm text-gray-700">
+                        {g.questions.map((q) => (
+                          <li key={q.slug}>{q.label}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <p className="mt-3 text-xs text-gray-500">
+              You will not be able to edit this visit after submitting.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={onCancel}
+                className="flex-1 rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={onConfirm}
+                className="flex-1 rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
+              >
+                Submit visit
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
