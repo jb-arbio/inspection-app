@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/firstVisit/hubSupabase', () => ({ getHubSupabase: vi.fn() }));
+vi.mock('@/lib/firstVisit/hubSupabaseServer', () => ({ getHubUserClient: vi.fn() }));
 
 import { GET, parseFindingMediaStep } from '../route';
-import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
+import { getHubUserClient } from '@/lib/firstVisit/hubSupabaseServer';
 
 const asMock = (fn: unknown) => fn as never as ReturnType<typeof vi.fn>;
 
@@ -68,7 +68,7 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns 401 when getHubRouteContext returns null', async () => {
-    asMock(getHubSupabase).mockReturnValue(null);
+    asMock(getHubUserClient).mockResolvedValue(null);
     const res = await GET(new Request('http://x/findings.csv'), {
       params: makeParams('i1'),
     });
@@ -77,7 +77,7 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
 
   it('returns text/csv with the header row', async () => {
     const createSignedUrl = vi.fn();
-    asMock(getHubSupabase).mockReturnValue(
+    asMock(getHubUserClient).mockResolvedValue(
       makeClient({ answers: [], targets: [], media: [], createSignedUrl }),
     );
     const res = await GET(new Request('http://x/findings.csv'), {
@@ -90,7 +90,7 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
 
   it('uses "Building / common" for a location-scoped finding', async () => {
     const createSignedUrl = vi.fn();
-    asMock(getHubSupabase).mockReturnValue(
+    asMock(getHubUserClient).mockResolvedValue(
       makeClient({
         answers: [
           { target_id: 't1', scope: 'location', question_key: 'finding_item_name', step_index: 0, value: 'Leak' },
@@ -112,7 +112,7 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
     const createSignedUrl = vi
       .fn()
       .mockResolvedValue({ data: { signedUrl: 'https://signed/url1' }, error: null });
-    asMock(getHubSupabase).mockReturnValue(
+    asMock(getHubUserClient).mockResolvedValue(
       makeClient({
         answers: [
           { target_id: 't1', scope: 'unit_category', question_key: 'finding_item_name', step_index: 2, value: 'Chair' },
