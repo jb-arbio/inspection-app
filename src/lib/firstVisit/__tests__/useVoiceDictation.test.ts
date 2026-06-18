@@ -63,6 +63,21 @@ describe('useVoiceDictation', () => {
     await waitFor(() => expect(result.current.status).toBe('idle'));
   });
 
+  it('transcription throws → status error (not idle), no result; onStart retries', async () => {
+    post.mockRejectedValueOnce(new Error('boom'));
+    const onResult = vi.fn();
+    const { result } = renderHook(() => useVoiceDictation(onResult));
+    await act(async () => { await result.current.onStart(); });
+    await act(async () => { await result.current.onStop(); });
+    expect(post).toHaveBeenCalledOnce();
+    expect(onResult).not.toHaveBeenCalled();
+    // Stays on 'error' rather than snapping back to idle.
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    // A fresh recording is allowed straight from the error state (retry).
+    await act(async () => { await result.current.onStart(); });
+    expect(result.current.status).toBe('recording');
+  });
+
   it('does not emit after unmount mid-transcription', async () => {
     let resolvePost: (v: string) => void = () => {};
     post.mockImplementationOnce(

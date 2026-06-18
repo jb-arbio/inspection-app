@@ -47,4 +47,13 @@ describe('VoiceDictationButton', () => {
     render(<VoiceDictationButton {...base} status="transcribing" />);
     expect(screen.getByRole('status')).toHaveTextContent(/transcribing/i);
   });
+
+  it('error: shows a retry affordance and calls onStart when tapped', async () => {
+    const onStart = vi.fn();
+    render(<VoiceDictationButton {...base} status="error" onStart={onStart} />);
+    expect(screen.getByRole('status')).toHaveTextContent(/failed|retry/i);
+    const btn = screen.getByRole('button', { name: /retry|failed|record|voice/i });
+    await userEvent.click(btn);
+    expect(onStart).toHaveBeenCalledOnce();
+  });
 });
