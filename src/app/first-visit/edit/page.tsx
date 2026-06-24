@@ -1,12 +1,9 @@
 import { EditorClient } from './EditorClient';
 
-// Survey content editor route. This page is a thin client wrapper around
-// <EditorClient/>. The REAL access enforcement is server-side in the API
-// routes the client calls: GET/PUT /api/first-visit/survey-config/draft and
-// POST /api/first-visit/survey-config (publish) all gate on isAdminEmail and
-// return 403 to non-admins. EditorClient renders a no-access message when the
-// draft GET comes back 403, so non-admins cannot load or save anything even if
-// they reach this URL directly.
+// Survey content editor route. Thin client wrapper around <EditorClient/>.
+// The whole app is behind login and any authenticated user may edit the survey,
+// so there is no per-user gate here; the API routes the client calls still
+// require a valid session (401 otherwise).
 export default function EditSurveyPage() {
   return (
     <main className="mx-auto max-w-3xl p-4">

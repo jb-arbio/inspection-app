@@ -4,7 +4,6 @@ vi.mock('@/lib/firstVisit/hubSupabase', () => ({ getHubSupabase: vi.fn() }));
 vi.mock('@/lib/firstVisit/hubSupabaseAdmin', () => ({
   getHubRouteContext: vi.fn(),
 }));
-vi.mock('@/lib/firstVisit/adminAccess', () => ({ isAdminEmail: vi.fn() }));
 // validateSurveyContent runs against the REAL full overlay (QUESTION_STRUCTURE),
 // which references many slugs our tiny test content omits. Mock it so each POST
 // test controls the ok/errors outcome explicitly.
@@ -16,19 +15,17 @@ import { GET, POST } from '../route';
 import { GET as DRAFT_GET, PUT as DRAFT_PUT } from '../draft/route';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
 import { getHubRouteContext } from '@/lib/firstVisit/hubSupabaseAdmin';
-import { isAdminEmail } from '@/lib/firstVisit/adminAccess';
 import { validateSurveyContent } from '@/lib/firstVisit/validateSurveyContent';
 import type { ContentConfig } from '@/lib/firstVisit/surveyConfig';
 
 const mockGetHubSupabase = getHubSupabase as unknown as ReturnType<typeof vi.fn>;
 const mockGetHubRouteContext =
   getHubRouteContext as unknown as ReturnType<typeof vi.fn>;
-const mockIsAdminEmail = isAdminEmail as unknown as ReturnType<typeof vi.fn>;
 const mockValidate =
   validateSurveyContent as unknown as ReturnType<typeof vi.fn>;
 
-// A genuinely valid minimal content config (passes validateSurveyContent against
-// the empty overlay subset it touches — slug is well-formed, no select/options).
+// Any authenticated user may edit/publish (the whole app is behind login), so the
+// routes only gate on a valid session — there is no admin role.
 const validContent: ContentConfig = {
   phases: [
     {
@@ -51,7 +48,6 @@ const validContent: ContentConfig = {
   ],
 };
 
-// Invalid: a select with empty options -> validateSurveyContent reports an error.
 const invalidContent = {
   phases: [
     {
@@ -178,23 +174,11 @@ describe('POST /api/first-visit/survey-config', () => {
     expect(await res.json()).toEqual({ error: 'unauth' });
   });
 
-  it('403 when authenticated but not admin', async () => {
-    mockGetHubRouteContext.mockResolvedValue({
-      supabase: {},
-      email: 'nope@arbio.com',
-    });
-    mockIsAdminEmail.mockReturnValue(false);
-    const res = await POST(makeReq(validContent));
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'forbidden' });
-  });
-
   it('400 with errors for invalid content', async () => {
     mockGetHubRouteContext.mockResolvedValue({
       supabase: {},
-      email: 'admin@arbio.com',
+      email: 'someone@arbio.com',
     });
-    mockIsAdminEmail.mockReturnValue(true);
     mockValidate.mockReturnValue({
       ok: false,
       errors: ['question "fv_visit_date" is select but has empty options'],
@@ -226,9 +210,8 @@ describe('POST /api/first-visit/survey-config', () => {
     }));
     mockGetHubRouteContext.mockResolvedValue({
       supabase: { from },
-      email: 'admin@arbio.com',
+      email: 'someone@arbio.com',
     });
-    mockIsAdminEmail.mockReturnValue(true);
     mockValidate.mockReturnValue({ ok: true, errors: [] });
 
     const res = await POST(makeReq(validContent));
@@ -240,7 +223,7 @@ describe('POST /api/first-visit/survey-config', () => {
       template_key: 'first_visit',
       version: 5,
       status: 'published',
-      created_by: 'admin@arbio.com',
+      created_by: 'someone@arbio.com',
     });
     expect(inserted.published_at).toBeTruthy();
   });
@@ -263,9 +246,8 @@ describe('POST /api/first-visit/survey-config', () => {
     }));
     mockGetHubRouteContext.mockResolvedValue({
       supabase: { from },
-      email: 'admin@arbio.com',
+      email: 'someone@arbio.com',
     });
-    mockIsAdminEmail.mockReturnValue(true);
     mockValidate.mockReturnValue({ ok: true, errors: [] });
 
     const res = await POST(makeReq(validContent));
@@ -281,18 +263,8 @@ describe('GET /api/first-visit/survey-config/draft', () => {
     expect(res.status).toBe(401);
   });
 
-  it('403 when not admin', async () => {
-    mockGetHubRouteContext.mockResolvedValue({
-      supabase: {},
-      email: 'nope@arbio.com',
-    });
-    mockIsAdminEmail.mockReturnValue(false);
-    const res = await DRAFT_GET();
-    expect(res.status).toBe(403);
-  });
-
-  it('returns the draft content for an admin', async () => {
-    const row = { version: null, content_json: validContent };
+  it('returns the draft content for an authenticated user', async () => {
+    const row = { version: 0, content_json: validContent };
     const from = vi.fn(() => ({
       select: () => ({
         eq: () => ({
@@ -304,13 +276,12 @@ describe('GET /api/first-visit/survey-config/draft', () => {
     }));
     mockGetHubRouteContext.mockResolvedValue({
       supabase: { from },
-      email: 'admin@arbio.com',
+      email: 'someone@arbio.com',
     });
-    mockIsAdminEmail.mockReturnValue(true);
 
     const res = await DRAFT_GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ version: null, content: validContent });
+    expect(await res.json()).toEqual({ version: 0, content: validContent });
   });
 });
 
@@ -322,24 +293,19 @@ describe('PUT /api/first-visit/survey-config/draft', () => {
     });
   }
 
-  it('403 when not admin', async () => {
-    mockGetHubRouteContext.mockResolvedValue({
-      supabase: {},
-      email: 'nope@arbio.com',
-    });
-    mockIsAdminEmail.mockReturnValue(false);
+  it('401 when not authenticated', async () => {
+    mockGetHubRouteContext.mockResolvedValue(null);
     const res = await DRAFT_PUT(makeReq(validContent));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
-  it('upserts the draft and returns {ok:true} for an admin', async () => {
+  it('upserts the draft and returns {ok:true}', async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn(() => ({ upsert }));
     mockGetHubRouteContext.mockResolvedValue({
       supabase: { from },
-      email: 'admin@arbio.com',
+      email: 'someone@arbio.com',
     });
-    mockIsAdminEmail.mockReturnValue(true);
 
     const res = await DRAFT_PUT(makeReq(validContent));
     expect(res.status).toBe(200);
@@ -347,6 +313,7 @@ describe('PUT /api/first-visit/survey-config/draft', () => {
     expect(upsert).toHaveBeenCalledOnce();
     expect(upsert.mock.calls[0][0]).toMatchObject({
       template_key: 'first_visit',
+      version: 0,
       status: 'draft',
     });
   });
