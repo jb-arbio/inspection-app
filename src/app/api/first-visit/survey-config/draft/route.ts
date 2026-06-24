@@ -8,6 +8,10 @@ export const maxDuration = 30;
 
 const TEMPLATE_KEY = 'first_visit';
 const TABLE = 'first_visit_survey_versions';
+// The draft occupies a reserved version slot so it has a stable primary key to
+// upsert against. Published versions are numbered from 1 upward, so 0 is never
+// taken by a published row.
+const DRAFT_VERSION = 0;
 
 // GET /api/first-visit/survey-config/draft — admin-only.
 // Returns the single draft row's content, or {version:null, content:null}.
@@ -46,14 +50,18 @@ export async function PUT(req: Request) {
   const body = await req.json();
   const content = body?.content as ContentConfig;
 
+  // Conflict on the real primary key (template_key, version); the draft always
+  // lives at DRAFT_VERSION. (There is no unique constraint on (template_key,
+  // status), so we cannot conflict on that.)
   const { error } = await supabase.from(TABLE).upsert(
     {
       template_key: TEMPLATE_KEY,
+      version: DRAFT_VERSION,
       status: 'draft',
       content_json: content,
       created_by: email,
     },
-    { onConflict: 'template_key,status' },
+    { onConflict: 'template_key,version' },
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -4,6 +4,9 @@
 -- After applying: NOTIFY pgrst, 'reload schema';
 --
 -- Each publish creates a new row; inspections pin the version they started on.
+-- Version numbering: the editable DRAFT lives at the reserved version 0; published
+-- versions are numbered from 1 upward. The draft route upserts on the primary key
+-- (template_key, version=0); the partial index below still guarantees one draft.
 
 create table if not exists onboarding.first_visit_survey_versions (
   template_key text not null default 'first_visit',
