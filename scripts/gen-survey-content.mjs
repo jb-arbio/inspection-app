@@ -8,7 +8,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { PHASES } from '../src/lib/firstVisit/questions.ts';
+import { PHASES, CONFIG_META } from '../src/lib/firstVisit/questions.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -61,7 +61,13 @@ for (const phase of PHASES) {
   contentPhases.push({ id: phase.id, label: phase.label, questions });
 }
 
-const content = { phases: contentPhases };
+// version/generated_at live on the content file (the source of truth) — carry
+// them forward so regenerating the seed never drops CONFIG_META metadata.
+const content = {
+  version: CONFIG_META.version,
+  generated_at: CONFIG_META.generated_at,
+  phases: contentPhases,
+};
 
 const contentPath = join(root, 'src/data/first-visit-content.json');
 writeFileSync(contentPath, JSON.stringify(content, null, 2) + '\n');
