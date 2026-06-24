@@ -11,7 +11,17 @@ export type PrefilledFieldProps = {
   hubValue: unknown | undefined;
   value: unknown;
   onChange: (next: { value: unknown; wasAcceptedAsIs: boolean }) => void;
+  // When the pre-filled value came from a low-confidence AI voice extraction,
+  // the banner gets an amber "check this" cue. Additive; undefined = no cue
+  // (hub prefills and confident AI fills look the same as before).
+  suggestionConfidence?: number | null;
+  // Transiently true right after a voice fill lands, so the banner animates in
+  // with a "from voice" tag. Additive; defaults false.
+  justFilled?: boolean;
 };
+
+// Below this, an AI-suggested value is flagged for closer review.
+const LOW_CONF_THRESHOLD = 0.6;
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -23,8 +33,10 @@ const SAVED_VISIBLE_MS = 1200;
 // inspector pauses typing — typing every keystroke would be noisy.
 const TEXT_DEBOUNCE_MS = 600;
 
-export function PrefilledField({ question, hubValue, value, onChange }: PrefilledFieldProps) {
+export function PrefilledField({ question, hubValue, value, onChange, suggestionConfidence, justFilled }: PrefilledFieldProps) {
   const hasHub = hubValue !== undefined && hubValue !== null && hubValue !== '';
+  const lowConfidence =
+    typeof suggestionConfidence === 'number' && suggestionConfidence < LOW_CONF_THRESHOLD;
   const id = `q-${question.slug}`;
   // 'observe' mode is freeform observational — render as textarea for text fields.
   const isLongText = question.type === 'text' && question.mode === 'observe';
@@ -141,11 +153,20 @@ export function PrefilledField({ question, hubValue, value, onChange }: Prefille
       )}
 
       {hasHub && (
-        <div className="flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm">
+        <div
+          className={`flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm transition-shadow ${
+            justFilled ? 'ring-2 ring-indigo-300' : ''
+          }`}
+        >
           <span className="rounded bg-yellow-200 px-1.5 py-0.5 text-xs font-medium">
-            Pre-filled
+            {justFilled ? '✦ from voice' : 'Pre-filled'}
           </span>
           <span className="truncate text-yellow-900">{String(hubValue)}</span>
+          {lowConfidence && (
+            <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+              check this
+            </span>
+          )}
           <button
             type="button"
             tabIndex={-1}

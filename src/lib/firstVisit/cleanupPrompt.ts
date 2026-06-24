@@ -13,3 +13,6 @@ export const CLEANUP_SYSTEM_PROMPT = [
 
 export const CLEANUP_MODEL = 'gpt-4o-mini';
 export const TRANSCRIBE_MODEL = 'whisper-1';
+// Higher-accuracy model for the section-voice flow (better DE/EN/mixed). The
+// per-field dictation route keeps TRANSCRIBE_MODEL (whisper-1).
+export const ACCURATE_TRANSCRIBE_MODEL = 'gpt-4o-transcribe';
