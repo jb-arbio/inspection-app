@@ -115,18 +115,29 @@ export const CONFIG_META = {
 };
 
 // Return phases (in original order) with their questions filtered to a single
-// scope. Drops phases that end up empty for the scope.
-export function phasesForScope(scope: HubScope, phaseIds?: string[]): FirstVisitPhase[] {
-  const phases = PHASES.map((p) => ({
-    ...p,
-    questions: p.questions.filter((q) => q.scope === scope),
-  })).filter((p) => p.questions.length > 0);
-  // Optional phase filter: lets the UI render a subset of a scope's phases as
-  // its own card (e.g. deal phase '1' at the top of the navigator, phase '11'
-  // "Deal evaluation" at the bottom). Absent = all phases, unchanged behavior.
-  if (!phaseIds) return phases;
+// scope. Drops phases that end up empty for the scope. Pure over the supplied
+// `phases` so the same logic runs against the bundled PHASES or a config loaded
+// at runtime (via SurveyConfigContext / progress.ts).
+//
+// Optional phase filter: lets the UI render a subset of a scope's phases as its
+// own card (e.g. deal phase '1' at the top of the navigator, phase '11' "Deal
+// evaluation" at the bottom). Absent = all phases, unchanged behavior.
+export function filterPhasesForScope(
+  phases: FirstVisitPhase[],
+  scope: HubScope,
+  phaseIds?: string[],
+): FirstVisitPhase[] {
+  const out = phases
+    .map((p) => ({ ...p, questions: p.questions.filter((q) => q.scope === scope) }))
+    .filter((p) => p.questions.length > 0);
+  if (!phaseIds) return out;
   const wanted = new Set(phaseIds);
-  return phases.filter((p) => wanted.has(p.id));
+  return out.filter((p) => wanted.has(p.id));
+}
+
+// Convenience wrapper over the bundled PHASES config.
+export function phasesForScope(scope: HubScope, phaseIds?: string[]): FirstVisitPhase[] {
+  return filterPhasesForScope(PHASES, scope, phaseIds);
 }
 
 export function questionsForScope(scope: HubScope): FirstVisitQuestion[] {

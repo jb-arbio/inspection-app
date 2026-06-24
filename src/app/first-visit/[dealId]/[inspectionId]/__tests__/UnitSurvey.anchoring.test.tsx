@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { UnitSurvey } from '../UnitSurvey';
 import { localDb } from '@/lib/firstVisit/db';
+import { SurveyConfigProvider } from '@/lib/firstVisit/SurveyConfigContext';
 import type { FirstVisitPhase, FirstVisitQuestion } from '@/lib/firstVisit/questions';
 
 // Minimal fixture mirroring the real WS-F mapping for the fusebox slug:
@@ -62,15 +64,15 @@ const phases: FirstVisitPhase[] = [
   },
 ];
 
+// Provide the two-phase fixture via the provider so the WS-F filter (run inside
+// UnitSurvey over the context phases) acts on exactly these phases. areaKeyFor /
+// groupIdFor are still imported by UnitSurvey, so keep them mocked.
 vi.mock('@/lib/firstVisit/questions', async () => {
   const actual = await vi.importActual<typeof import('@/lib/firstVisit/questions')>(
     '@/lib/firstVisit/questions',
   );
   return {
     ...actual,
-    // Return our two-phase fixture; actual.phasesForScope is bypassed because
-    // we want the WS-F filter to act on exactly these phases.
-    phasesForScope: () => phases.map((p) => ({ ...p, questions: [...p.questions] })),
     areaKeyFor: (q: FirstVisitQuestion) => q.phase_id,
     groupIdFor: (q: FirstVisitQuestion) => q.group_id ?? null,
   };
@@ -78,6 +80,19 @@ vi.mock('@/lib/firstVisit/questions', async () => {
 
 vi.mock('@/lib/firstVisit/sync', () => ({ enqueue: vi.fn(async () => undefined) }));
 vi.mock('@/lib/firstVisit/analytics', () => ({ track: vi.fn() }));
+
+function renderWithConfig(ui: ReactElement) {
+  return render(
+    <SurveyConfigProvider
+      value={{
+        phases: phases.map((p) => ({ ...p, questions: [...p.questions] })),
+        allQuestions: phases.flatMap((p) => p.questions),
+      }}
+    >
+      {ui}
+    </SurveyConfigProvider>,
+  );
+}
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -89,7 +104,7 @@ afterEach(async () => {
 });
 
 function renderSurvey() {
-  return render(
+  return renderWithConfig(
     <UnitSurvey
       inspectionId="i1"
       target={{ id: 'tgt-1', label: 'Property A' }}

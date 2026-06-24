@@ -1,5 +1,10 @@
 import { localDb, type LocalAnswer } from './db';
-import { PHASES, isScopeLevelRequired, type FirstVisitPhase } from './questions';
+import {
+  PHASES,
+  filterPhasesForScope,
+  isScopeLevelRequired,
+  type FirstVisitPhase,
+} from './questions';
 import type { HubScope } from './resolveScope';
 import { isAnswered } from '@/components/firstVisit/ProgressRing';
 
@@ -17,13 +22,11 @@ export function computeProgressFromAnswers(
   phaseIds?: string[],
   phases: FirstVisitPhase[] = PHASES,
 ): ScopeProgress {
-  // Replicates phasesForScope(scope, phaseIds) over the injected `phases`:
-  // keep only this-scope questions, drop emptied phases, and (when phaseIds is
-  // given) restrict to those phase ids.
-  const wanted = phaseIds ? new Set(phaseIds) : null;
-  const questions = phases
-    .filter((p) => !wanted || wanted.has(p.id))
-    .flatMap((p) => p.questions.filter((q) => q.scope === scope));
+  // Filter the injected `phases` to this scope (and optional phaseIds) using the
+  // shared helper, then flatten to its questions.
+  const questions = filterPhasesForScope(phases, scope, phaseIds).flatMap(
+    (p) => p.questions,
+  );
   // Repeater-group members (group_id set, e.g. findings, check-in steps) are
   // required only within a populated block, never at scope level — see
   // isScopeLevelRequired. Excluding them keeps the ring completable for a

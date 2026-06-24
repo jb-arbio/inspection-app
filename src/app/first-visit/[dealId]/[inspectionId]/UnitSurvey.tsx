@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  phasesForScope,
+  filterPhasesForScope,
   areaKeyFor,
   groupIdFor,
   isScopeLevelRequired,
@@ -9,6 +9,7 @@ import {
   filterOutAnchored,
   type FirstVisitQuestion,
 } from '@/lib/firstVisit/questions';
+import { useSurveyConfig } from '@/lib/firstVisit/SurveyConfigContext';
 import { RepeaterStub } from '@/components/firstVisit/PrefilledField';
 import { MediaButtons } from '@/components/firstVisit/MediaButtons';
 import { AttachAffordance } from '@/components/firstVisit/AttachAffordance';
@@ -53,6 +54,7 @@ export function UnitSurvey({
   breadcrumb?: string[];
   phaseIds?: string[];
 }) {
+  const { phases: configPhases } = useSurveyConfig();
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
   // Keys of fields just populated by a voice fill — drives the transient
   // "✦ from voice" highlight; cleared after a short delay.
@@ -63,7 +65,7 @@ export function UnitSurvey({
   // scope so an anchor in phase A can pull a file-question that was originally
   // in phase B.
   const phases = useMemo(() => {
-    const raw = phasesForScope(scope, phaseIds);
+    const raw = filterPhasesForScope(configPhases, scope, phaseIds);
     const allInScope = raw.flatMap((p) => p.questions);
     const anchorMap = buildAnchorMap(allInScope);
     const anchoredSlugs = new Set<string>();
@@ -71,11 +73,13 @@ export function UnitSurvey({
       for (const q of arr) anchoredSlugs.add(q.slug);
     }
     return filterOutAnchored(raw, anchoredSlugs);
-  }, [scope, phaseIds]);
+  }, [configPhases, scope, phaseIds]);
   const anchorMap = useMemo(() => {
-    const allInScope = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
+    const allInScope = filterPhasesForScope(configPhases, scope, phaseIds).flatMap(
+      (p) => p.questions,
+    );
     return buildAnchorMap(allInScope);
-  }, [scope, phaseIds]);
+  }, [configPhases, scope, phaseIds]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
   const activeChipRef = useRef<HTMLButtonElement>(null);
