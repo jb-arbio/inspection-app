@@ -16,9 +16,10 @@ const FIELD_TYPES = [
 // The set of valid hub scopes, mirroring `HubScope` in resolveScope.ts.
 const HUB_SCOPES = ['deal', 'location', 'unit_category'] as const;
 
-// Slugs are lowercase, start with a letter, and may contain letters, digits,
-// underscores and dots (matching the dotted slugs used across the config).
-const SLUG_RE = /^[a-z][a-z0-9_.]*$/;
+// Slugs start with a letter and may contain letters (either case), digits,
+// underscores and dots — matching the real config, which includes camelCase
+// dotted slugs like `appliance.availabilityType` alongside snake_case `fv_*`.
+const SLUG_RE = /^[A-Za-z][A-Za-z0-9_.]*$/;
 
 // zod shape for a single content question. Validation here is purely about the
 // SHAPE of one row; cross-row and structural rules are handled imperatively
@@ -46,7 +47,10 @@ const questionShape = z.object({
  *  - each question matches the zod shape above (slug pattern, non-empty label,
  *    valid type/scope, options is string[], required boolean, non-empty phase
  *    id/label);
- *  - no duplicate slug appears anywhere across all phases;
+ *  - no duplicate slug appears within a SINGLE phase (the same slug may appear in
+ *    different phases — e.g. the Findings repeater lives at both the unit and the
+ *    building phase — because answers are keyed by target_id+area_key+slug, so
+ *    only a same-phase collision is ambiguous);
  *  - a `select` question — or any question with `multi_select: true` — must have
  *    a non-empty `options` array;
  *  - every overlay key must correspond to a slug that exists in the content;
@@ -66,7 +70,11 @@ export function validateSurveyContent(
   );
 
   // 1. Per-row shape validation + select/multi_select options checks.
+  // seenSlugs = every slug that exists anywhere (used for the overlay-reference
+  // check). slugsByPhase = per-phase sets, so we only flag a duplicate when the
+  // SAME slug collides WITHIN one phase.
   const seenSlugs = new Set<string>();
+  const slugsByPhase = new Map<string, Set<string>>();
   for (const q of allQuestions) {
     const result = questionShape.safeParse(q);
     if (!result.success) {
@@ -80,13 +88,17 @@ export function validateSurveyContent(
       }
     }
 
-    // Duplicate slug detection.
+    // Duplicate slug detection — scoped to the phase.
     if (typeof q.slug === 'string') {
-      if (seenSlugs.has(q.slug)) {
-        errors.push(`duplicate slug "${q.slug}"`);
+      const pid = typeof q.phase_id === 'string' ? q.phase_id : '?';
+      const phaseSet = slugsByPhase.get(pid) ?? new Set<string>();
+      if (phaseSet.has(q.slug)) {
+        errors.push(`duplicate slug "${q.slug}" in phase "${pid}"`);
       } else {
-        seenSlugs.add(q.slug);
+        phaseSet.add(q.slug);
       }
+      slugsByPhase.set(pid, phaseSet);
+      seenSlugs.add(q.slug);
     }
 
     // select / multi_select must have options.

@@ -5,6 +5,8 @@ import type {
   ContentQuestion,
   StructureOverlay,
 } from '../surveyConfig';
+import realContent from '@/data/first-visit-content.json';
+import { QUESTION_STRUCTURE } from '../questionStructure';
 
 // A minimal, fully valid content question. Tests clone + tweak this.
 function makeQuestion(overrides: Partial<ContentQuestion> = {}): ContentQuestion {
@@ -35,6 +37,18 @@ function makeConfig(questions: ContentQuestion[]): ContentConfig {
 }
 
 describe('validateSurveyContent', () => {
+  // The non-negotiable guard: the validator MUST accept the actual shipped
+  // config. If this fails, the loader would silently fall back to the seed in
+  // production and the editor feature would be dead on arrival.
+  it('accepts the real shipped content + structure overlay', () => {
+    const res = validateSurveyContent(
+      realContent as unknown as ContentConfig,
+      QUESTION_STRUCTURE,
+    );
+    expect(res.errors).toEqual([]);
+    expect(res.ok).toBe(true);
+  });
+
   it('returns ok:true with no errors for a fully valid config', () => {
     const config = makeConfig([
       makeQuestion({ slug: 'fv_a', type: 'text' }),
@@ -54,16 +68,29 @@ describe('validateSurveyContent', () => {
     });
   });
 
-  it('flags a duplicate slug across phases', () => {
+  it('flags a duplicate slug within the same phase', () => {
     const config: ContentConfig = {
       phases: [
-        { id: 'p1', label: 'P1', questions: [makeQuestion({ slug: 'dup', phase_id: 'p1', phase_label: 'P1' })] },
-        { id: 'p2', label: 'P2', questions: [makeQuestion({ slug: 'dup', phase_id: 'p2', phase_label: 'P2' })] },
+        { id: 'p1', label: 'P1', questions: [
+          makeQuestion({ slug: 'dup', phase_id: 'p1', phase_label: 'P1' }),
+          makeQuestion({ slug: 'dup', phase_id: 'p1', phase_label: 'P1' }),
+        ] },
       ],
     };
     const res = validateSurveyContent(config, {});
     expect(res.ok).toBe(false);
     expect(res.errors.some((e) => e.includes('duplicate') && e.includes('dup'))).toBe(true);
+  });
+
+  it('allows the same slug in DIFFERENT phases (e.g. the Findings repeater at two scopes)', () => {
+    const config: ContentConfig = {
+      phases: [
+        { id: 'p1', label: 'P1', questions: [makeQuestion({ slug: 'finding_item_name', phase_id: 'p1', phase_label: 'P1' })] },
+        { id: 'p2', label: 'P2', questions: [makeQuestion({ slug: 'finding_item_name', phase_id: 'p2', phase_label: 'P2' })] },
+      ],
+    };
+    const res = validateSurveyContent(config, {});
+    expect(res.errors.some((e) => e.includes('duplicate'))).toBe(false);
   });
 
   it('flags a select question with empty options', () => {
