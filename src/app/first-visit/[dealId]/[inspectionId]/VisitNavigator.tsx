@@ -8,6 +8,7 @@ import { createHandlers } from '@/lib/firstVisit/handlers';
 import { type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
+import { EditSurveyButton } from '@/components/firstVisit/EditSurveyButton';
 import { ProgressRing } from '@/components/firstVisit/ProgressRing';
 import { track } from '@/lib/firstVisit/analytics';
 import { UnitSurvey, type SurveyTarget } from './UnitSurvey';
@@ -17,6 +18,7 @@ import {
   type ScopeProgress,
 } from '@/lib/firstVisit/progress';
 import { validateUnitIdentifier } from '@/lib/firstVisit/unitIdentifier';
+import { useSurveyConfig } from '@/lib/firstVisit/SurveyConfigContext';
 
 // The deal-scoped questions render as two navigator cards: metadata up top,
 // evaluation at the bottom — you can't judge a deal before walking it.
@@ -112,6 +114,7 @@ export default function VisitNavigator({
   const [renamingUnitId, setRenamingUnitId] = useState<string | null>(null);
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
+  const { phases: configPhases } = useSurveyConfig();
 
   const reloadTargets = useCallback(async () => {
     const rows = await localDb.targets
@@ -151,7 +154,7 @@ export default function VisitNavigator({
 
   const progressFor = (targetId: string, scope: HubScope, phaseIds?: string[]): ScopeProgress => {
     const own = answers.filter((a) => a.target_id === targetId);
-    return computeProgressFromAnswers(scope, own, phaseIds);
+    return computeProgressFromAnswers(scope, own, phaseIds, configPhases);
   };
 
   // Count required questions still unanswered across every scope in this
@@ -457,6 +460,7 @@ export default function VisitNavigator({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2 text-xs">
+            <EditSurveyButton />
             <SyncBadge pending={pending} syncing={syncing} />
             <button
               onClick={syncNow}

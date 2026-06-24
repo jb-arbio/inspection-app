@@ -21,19 +21,30 @@ import type { FirstVisitQuestion } from './questions';
 // First question wins per slug. Field shape (type/options) is identical across
 // scope duplicates (e.g. finding_* exists at unit_category and location), so the
 // schema is scope-agnostic; the client resolves scope at write time.
-const BY_SLUG: Map<string, FirstVisitQuestion> = (() => {
+export function buildBySlug(questions: FirstVisitQuestion[]): Map<string, FirstVisitQuestion> {
   const m = new Map<string, FirstVisitQuestion>();
-  for (const q of ALL_QUESTIONS) if (!m.has(q.slug)) m.set(q.slug, q);
+  for (const q of questions) if (!m.has(q.slug)) m.set(q.slug, q);
   return m;
-})();
+}
 
-export function questionForSlug(slug: string): FirstVisitQuestion | undefined {
-  return BY_SLUG.get(slug);
+// Default map over the bundled config. Injecting a different question set (e.g.
+// a survey loaded from the hub) builds a fresh map; existing zero-arg callers
+// keep using this one — zero behavior change.
+const DEFAULT_BY_SLUG = buildBySlug(ALL_QUESTIONS);
+
+export function questionForSlug(
+  slug: string,
+  bySlug: Map<string, FirstVisitQuestion> = DEFAULT_BY_SLUG,
+): FirstVisitQuestion | undefined {
+  return bySlug.get(slug);
 }
 
 // A field is voice-fillable when it exists and is not a media (file) capture.
-export function isFillableSlug(slug: string): boolean {
-  const q = BY_SLUG.get(slug);
+export function isFillableSlug(
+  slug: string,
+  bySlug: Map<string, FirstVisitQuestion> = DEFAULT_BY_SLUG,
+): boolean {
+  const q = bySlug.get(slug);
   return !!q && q.type !== 'file';
 }
 
@@ -68,10 +79,10 @@ function fieldEntrySchema(q: FirstVisitQuestion): JsonSchema {
   };
 }
 
-function objectOf(slugs: string[]): JsonSchema {
+function objectOf(slugs: string[], bySlug: Map<string, FirstVisitQuestion>): JsonSchema {
   const properties: Record<string, JsonSchema> = {};
   for (const slug of slugs) {
-    const q = BY_SLUG.get(slug);
+    const q = bySlug.get(slug);
     if (q) properties[slug] = fieldEntrySchema(q);
   }
   return {
@@ -91,12 +102,18 @@ export type ExtractionSchema = {
 
 // Partition target slugs into single fields vs repeater groups and build the
 // strict JSON schema + a human-readable catalogue for the user prompt.
-export function buildExtractionSchema(targetSlugs: string[]): ExtractionSchema {
+export function buildExtractionSchema(
+  targetSlugs: string[],
+  questions: FirstVisitQuestion[] = ALL_QUESTIONS,
+): ExtractionSchema {
+  // Reuse the prebuilt default map for the common (bundled-config) path; only
+  // build a fresh one when an injected question set is supplied.
+  const bySlug = questions === ALL_QUESTIONS ? DEFAULT_BY_SLUG : buildBySlug(questions);
   const singleSlugs: string[] = [];
   const groupSlugsByGroup: Record<string, string[]> = {};
 
   for (const slug of targetSlugs) {
-    const q = BY_SLUG.get(slug);
+    const q = bySlug.get(slug);
     if (!q || q.type === 'file') continue; // skip unknown + media
     const group = groupIdFor(q);
     if (group) (groupSlugsByGroup[group] ??= []).push(slug);
@@ -115,7 +132,7 @@ export function buildExtractionSchema(targetSlugs: string[]): ExtractionSchema {
         required: ['group_id', 'fields'],
         properties: {
           group_id: { type: 'string', enum: groupIds },
-          fields: objectOf(allGroupSlugs),
+          fields: objectOf(allGroupSlugs, bySlug),
         },
       }
     : { type: 'object', additionalProperties: false, properties: {}, required: [] };
@@ -125,12 +142,17 @@ export function buildExtractionSchema(targetSlugs: string[]): ExtractionSchema {
     additionalProperties: false,
     required: ['singles', 'items'],
     properties: {
-      singles: objectOf(singleSlugs),
+      singles: objectOf(singleSlugs, bySlug),
       items: { type: 'array', items: itemSchema },
     },
   };
 
-  return { schema, singleSlugs, groupSlugsByGroup, catalogue: buildCatalogue(singleSlugs, groupSlugsByGroup) };
+  return {
+    schema,
+    singleSlugs,
+    groupSlugsByGroup,
+    catalogue: buildCatalogue(singleSlugs, groupSlugsByGroup, bySlug),
+  };
 }
 
 function describe(q: FirstVisitQuestion): string {
@@ -152,19 +174,20 @@ function describe(q: FirstVisitQuestion): string {
 function buildCatalogue(
   singleSlugs: string[],
   groupSlugsByGroup: Record<string, string[]>,
+  bySlug: Map<string, FirstVisitQuestion>,
 ): string {
   const lines: string[] = [];
   if (singleSlugs.length) {
     lines.push('Single fields (fill at most once):');
     for (const s of singleSlugs) {
-      const q = BY_SLUG.get(s);
+      const q = bySlug.get(s);
       if (q) lines.push(describe(q));
     }
   }
   for (const [group, slugs] of Object.entries(groupSlugsByGroup)) {
     lines.push(`Repeating item group "${group}" (one item per distinct object/issue):`);
     for (const s of slugs) {
-      const q = BY_SLUG.get(s);
+      const q = bySlug.get(s);
       if (q) lines.push(describe(q));
     }
   }

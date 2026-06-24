@@ -1,42 +1,53 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { UnitSurvey } from '../UnitSurvey';
 import { localDb } from '@/lib/firstVisit/db';
+import { SurveyConfigProvider } from '@/lib/firstVisit/SurveyConfigContext';
 import type { FirstVisitPhase, FirstVisitQuestion } from '@/lib/firstVisit/questions';
 
-// Mock questions module so the test is independent of the real config and
-// the parallel-agent edits in src/lib/firstVisit/questions.ts. We expose two
-// phases each with a single (non-required) question so isFirst / isLast are
-// deterministic and no required-question gating is hit.
+// Provide config via the SurveyConfigProvider so the test is independent of the
+// real config. We expose two phases each with a single (non-required) question
+// so isFirst / isLast are deterministic and no required-question gating is hit.
+const baseQ: FirstVisitQuestion = {
+  slug: 'q1',
+  label: 'Question 1',
+  description: null,
+  scope: 'location',
+  mode: 'data',
+  type: 'text',
+  options: [],
+  required: false,
+  repeater: false,
+  pms_target: null,
+  status: 'existing',
+  verdict: null,
+  notes: null,
+  phase_id: 'p1',
+  phase_label: 'Phase 1',
+};
+const phases: FirstVisitPhase[] = [
+  { id: 'p1', label: 'Phase 1', questions: [{ ...baseQ, slug: 'q1', label: 'Question 1', phase_id: 'p1', phase_label: 'Phase 1' }] },
+  { id: 'p2', label: 'Phase 2', questions: [{ ...baseQ, slug: 'q2', label: 'Question 2', phase_id: 'p2', phase_label: 'Phase 2' }] },
+];
+
+function renderWithConfig(ui: ReactElement) {
+  return render(
+    <SurveyConfigProvider value={{ phases, allQuestions: phases.flatMap((p) => p.questions) }}>
+      {ui}
+    </SurveyConfigProvider>,
+  );
+}
+
+// areaKeyFor is still imported by UnitSurvey; keep it deterministic for the
+// fixture phase ids.
 vi.mock('@/lib/firstVisit/questions', async () => {
   const actual = await vi.importActual<
     typeof import('@/lib/firstVisit/questions')
   >('@/lib/firstVisit/questions');
-  const baseQ: FirstVisitQuestion = {
-    slug: 'q1',
-    label: 'Question 1',
-    description: null,
-    scope: 'location',
-    mode: 'data',
-    type: 'text',
-    options: [],
-    required: false,
-    repeater: false,
-    pms_target: null,
-    status: 'existing',
-    verdict: null,
-    notes: null,
-    phase_id: 'p1',
-    phase_label: 'Phase 1',
-  };
-  const phases: FirstVisitPhase[] = [
-    { id: 'p1', label: 'Phase 1', questions: [{ ...baseQ, slug: 'q1', label: 'Question 1', phase_id: 'p1', phase_label: 'Phase 1' }] },
-    { id: 'p2', label: 'Phase 2', questions: [{ ...baseQ, slug: 'q2', label: 'Question 2', phase_id: 'p2', phase_label: 'Phase 2' }] },
-  ];
   return {
     ...actual,
-    phasesForScope: () => phases,
     areaKeyFor: (q: FirstVisitQuestion) => q.phase_id,
   };
 });
@@ -60,7 +71,7 @@ afterEach(async () => {
 });
 
 function renderSurvey(onBack = vi.fn()) {
-  render(
+  renderWithConfig(
     <UnitSurvey
       inspectionId="i1"
       target={{ id: 'tgt-1', label: 'Property A' }}

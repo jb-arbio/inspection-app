@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildExtractionSchema, isFillableSlug } from '../extractionSchema';
 import { ALL_QUESTIONS } from '../questions';
+import type { FirstVisitQuestion } from '../questions';
 
 describe('buildExtractionSchema', () => {
   const built = buildExtractionSchema([
@@ -43,5 +44,42 @@ describe('buildExtractionSchema', () => {
     expect(isFillableSlug('finding_media')).toBe(false);
     expect(isFillableSlug('finding_item_name')).toBe(true);
     expect(isFillableSlug('totally_unknown_slug')).toBe(false);
+  });
+
+  it('builds the schema against an injected question set, not the global config', () => {
+    const customQ: FirstVisitQuestion = {
+      slug: 'injected_custom_single',
+      label: 'Injected custom single',
+      description: null,
+      scope: 'location',
+      mode: 'observe',
+      type: 'select',
+      options: ['Alpha', 'Beta'],
+      required: true,
+      repeater: false,
+      pms_target: null,
+      status: 'existing',
+      verdict: null,
+      notes: null,
+      phase_id: 'custom_phase',
+      phase_label: 'Custom phase',
+    };
+
+    const built = buildExtractionSchema(
+      ['injected_custom_single', 'fv_location_quality'],
+      [customQ],
+    );
+    const schema = built.schema as any;
+
+    // The custom slug is present and constrained to its custom options.
+    expect(built.singleSlugs).toEqual(['injected_custom_single']);
+    expect(
+      schema.properties.singles.properties.injected_custom_single.properties.value.enum,
+    ).toEqual(['Alpha', 'Beta', null]);
+
+    // A real global slug NOT in the injected set is dropped (treated as unknown),
+    // proving the injected questions array — not ALL_QUESTIONS — was used.
+    expect(built.singleSlugs).not.toContain('fv_location_quality');
+    expect(schema.properties.singles.properties.fv_location_quality).toBeUndefined();
   });
 });

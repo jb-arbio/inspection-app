@@ -86,12 +86,24 @@ export type OutboxJob = {
   last_attempt_at?: number;
 };
 
+// A cached published survey config, keyed by [template_key+version]. Stored so
+// the survey can render offline from the last config it saw (or a pinned
+// historical version). `content_json` is the raw ContentConfig as fetched from
+// the API; it is composed with the bundled QUESTION_STRUCTURE overlay at load.
+export type LocalSurveyConfig = {
+  template_key: string;
+  version: number;
+  content_json: unknown;
+  cached_at: string;
+};
+
 class FirstVisitDexie extends Dexie {
   inspections!: Table<LocalInspection, string>;
   targets!: Table<LocalTarget, string>;
   answers!: Table<LocalAnswer, string>;
   media!: Table<LocalMedia, string>;
   outbox!: Table<OutboxJob, number>;
+  surveyConfig!: Table<LocalSurveyConfig, [string, number]>;
 
   constructor() {
     super('first_visit');
@@ -126,6 +138,18 @@ class FirstVisitDexie extends Dexie {
         'id, inspection_id, target_id, [target_id+question_key+area_key], [target_id+area_key+question_key+step_index], synced_at',
       media: 'id, inspection_id, target_id, answer_id, verified_at',
       outbox: '++id, kind, created_at',
+    });
+    // v4 — local cache of published survey configs, keyed by compound primary
+    // key [template_key+version]. All v3 stores are repeated unchanged (Dexie
+    // requires each version to declare the full schema it expects).
+    this.version(4).stores({
+      inspections: 'id, deal_id, status, synced_at',
+      targets: 'id, inspection_id, parent_id, kind',
+      answers:
+        'id, inspection_id, target_id, [target_id+question_key+area_key], [target_id+area_key+question_key+step_index], synced_at',
+      media: 'id, inspection_id, target_id, answer_id, verified_at',
+      outbox: '++id, kind, created_at',
+      surveyConfig: '[template_key+version]',
     });
   }
 }

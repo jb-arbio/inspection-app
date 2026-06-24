@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeProgressFromAnswers } from '../progress';
 import { questionsForScope, isScopeLevelRequired } from '../questions';
+import type { FirstVisitPhase, FirstVisitQuestion } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
 
@@ -158,6 +159,58 @@ describe('computeProgressFromAnswers phase filter', () => {
     expect(meta.total + evaluation.total).toBe(whole.total);
     expect(meta.total).toBeGreaterThan(0);
     expect(evaluation.total).toBeGreaterThan(0);
+  });
+
+  it('counts against an injected phases set, not the global config', () => {
+    // A tiny custom survey: one phase, one location-scoped required single
+    // question. The slug does not exist in the bundled config, so if the global
+    // PHASES were used the total/done would not reflect this set.
+    const customQ: FirstVisitQuestion = {
+      slug: 'custom_only_field',
+      label: 'Custom only field',
+      description: null,
+      scope: 'location',
+      mode: 'observe',
+      type: 'text',
+      options: [],
+      required: true,
+      repeater: false,
+      pms_target: null,
+      status: 'existing',
+      verdict: null,
+      notes: null,
+      phase_id: 'custom_phase',
+      phase_label: 'Custom phase',
+    };
+    const customPhases: FirstVisitPhase[] = [
+      { id: 'custom_phase', label: 'Custom phase', questions: [customQ] },
+    ];
+
+    // Total reflects exactly the one required question in the injected set.
+    const empty = computeProgressFromAnswers('location', [], undefined, customPhases);
+    expect(empty.total).toBe(1);
+    expect(empty.done).toBe(0);
+
+    // Answering it counts toward the injected denominator.
+    const filled = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('custom_only_field', 'hello')],
+      undefined,
+      customPhases,
+    );
+    expect(filled.done).toBe(1);
+
+    // A real global location slug is NOT part of the injected set, so it never
+    // counts — proving we measured against the custom phases, not PHASES.
+    const globalSlug = requiredSlugs('location')[0];
+    const withGlobalAnswer = computeProgressFromAnswers(
+      'location',
+      [makeAnswer(globalSlug, 'x')],
+      undefined,
+      customPhases,
+    );
+    expect(withGlobalAnswer.total).toBe(1);
+    expect(withGlobalAnswer.done).toBe(0);
   });
 
   it('an answer only counts toward the card that contains its question', () => {
