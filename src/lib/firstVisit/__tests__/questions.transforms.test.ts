@@ -1,15 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_QUESTIONS, PHASES } from '../questions';
 
-describe('first-visit question transforms', () => {
-  describe('hideDealStampingQuestions', () => {
+// These used to assert the behavior of internal transform functions
+// (hideDealStampingQuestions, stripVerifyWord). The transforms are gone — their
+// output is now baked into first-visit-content.json. The assertions are
+// retargeted to the composed RESULT (PHASES/ALL_QUESTIONS), which still holds.
+describe('first-visit composed config (formerly transform) results', () => {
+  describe('deal-stamping question hidden', () => {
     it('drops fv_visit_deal_name entirely (deal name lives on deals table, not data_points)', () => {
       const dealName = ALL_QUESTIONS.find((q) => q.slug === 'fv_visit_deal_name');
       expect(dealName).toBeUndefined();
     });
   });
 
-  describe('stripVerifyWord', () => {
+  describe('"verify" word stripped from display strings', () => {
     it('strips trailing " verify" from question labels (slug preserved)', () => {
       const q = ALL_QUESTIONS.find((qq) => qq.slug === 'fv_building_amenities_verify');
       expect(q).toBeDefined();
