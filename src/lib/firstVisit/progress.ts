@@ -3,6 +3,7 @@ import {
   PHASES,
   filterPhasesForScope,
   isScopeLevelRequired,
+  isVisible,
   type FirstVisitPhase,
 } from './questions';
 import type { HubScope } from './resolveScope';
@@ -27,13 +28,21 @@ export function computeProgressFromAnswers(
   const questions = filterPhasesForScope(phases, scope, phaseIds).flatMap(
     (p) => p.questions,
   );
+  const byKey = new Map<string, LocalAnswer>();
+  for (const a of answers) byKey.set(a.question_key, a);
+  // Controlling answers for visibility gates: slug → current value. Gate
+  // controllers are single-instance questions, so question_key === slug.
+  const answersByValue = new Map<string, unknown>();
+  for (const a of answers) answersByValue.set(a.question_key, a.value);
   // Repeater-group members (group_id set, e.g. findings, check-in steps) are
   // required only within a populated block, never at scope level — see
   // isScopeLevelRequired. Excluding them keeps the ring completable for a
-  // unit/building with zero findings.
-  const required = questions.filter(isScopeLevelRequired);
-  const byKey = new Map<string, LocalAnswer>();
-  for (const a of answers) byKey.set(a.question_key, a);
+  // unit/building with zero findings. Questions hidden by a `visible_when` gate
+  // are also excluded — a collapsed block must never make the ring
+  // uncompletable.
+  const required = questions
+    .filter(isScopeLevelRequired)
+    .filter((q) => isVisible(q.visible_when, answersByValue));
   let done = 0;
   for (const q of required) {
     const a = byKey.get(q.slug);

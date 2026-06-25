@@ -227,4 +227,63 @@ describe('computeProgressFromAnswers phase filter', () => {
     expect(meta.done).toBe(0);
     expect(evaluation.done).toBe(1);
   });
+
+  it('excludes required questions hidden by a visible_when gate from the denominator', () => {
+    const base = {
+      label: '',
+      description: null,
+      scope: 'location' as HubScope,
+      mode: 'data' as const,
+      type: 'text' as const,
+      options: [],
+      repeater: false,
+      pms_target: null,
+      status: 'existing' as const,
+      verdict: null,
+      notes: null,
+      phase_id: 'p',
+      phase_label: 'P',
+    };
+    const gate: FirstVisitQuestion = { ...base, slug: 'gate', type: 'boolean', required: false };
+    const dependent: FirstVisitQuestion = {
+      ...base,
+      slug: 'dep',
+      required: true,
+      visible_when: { question: 'gate', equals: true },
+    };
+    const phases: FirstVisitPhase[] = [
+      { id: 'p', label: 'P', questions: [gate, dependent] },
+    ];
+
+    // Gate unanswered → dependent hidden → not counted (total 0).
+    expect(computeProgressFromAnswers('location', [], undefined, phases).total).toBe(0);
+
+    // Gate = false → still hidden → not counted.
+    const off = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', false)],
+      undefined,
+      phases,
+    );
+    expect(off.total).toBe(0);
+
+    // Gate = true → dependent visible → counted, and answering it completes it.
+    const onEmpty = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true)],
+      undefined,
+      phases,
+    );
+    expect(onEmpty.total).toBe(1);
+    expect(onEmpty.done).toBe(0);
+
+    const onFilled = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true), makeAnswer('dep', 'answered')],
+      undefined,
+      phases,
+    );
+    expect(onFilled.total).toBe(1);
+    expect(onFilled.done).toBe(1);
+  });
 });

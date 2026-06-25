@@ -48,6 +48,7 @@ export type OverlayEntry = Partial<
     | 'follow_up'
     | 'per_option_follow_up'
     | 'anchor_to'
+    | 'visible_when'
   >
 >;
 
