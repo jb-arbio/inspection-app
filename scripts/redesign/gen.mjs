@@ -7,6 +7,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { PHASES, VERSION } from './rows.mjs';
+import { PMS } from './pms.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..', '..');
@@ -40,7 +41,10 @@ for (const phase of PHASES) {
     // --- overlay (wiring) ---
     const entry = {};
     if (q.mode && q.mode !== 'data') entry.mode = q.mode;
-    if (q.pms_target != null) entry.pms_target = q.pms_target;
+    // PMS target comes from the dedicated map (pms.mjs); a per-row pms_target
+    // on the spec overrides it. Slugs absent from both stay hub-only (null).
+    const pms = q.pms_target ?? PMS[q.slug] ?? null;
+    if (pms != null) entry.pms_target = pms;
     if (q.status && q.status !== 'existing') entry.status = q.status;
     if (q.group_id) entry.group_id = q.group_id;
     if (q.follow_up) entry.follow_up = q.follow_up;
