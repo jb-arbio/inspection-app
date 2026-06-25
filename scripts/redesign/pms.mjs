@@ -36,7 +36,7 @@ export const PMS = {
   fv_building_mold: 'operationalInfo.buildingMold',
   // fv_building_hallways_clean → hub-only
   fv_building_construction_nearby: 'operationalInfo.constructionNearby',
-  fv_building_amenities_verify: 'equipmentAndAmenities.name  [GAP — equipmentAndAmenities is catalog-linked (resourceId); no free name field]',
+  fv_building_amenities_verify: 'equipmentAndAmenities (amenity entries)  [catalog — name/type from resourceId]',
   fv_accessibility_step_free_entry: 'accessibilityInfo.stepFreeEntry',
   fv_accessibility_ramps: 'accessibilityInfo.ramps',
   fv_accessibility_notes: 'accessibilityInfo.notes',
@@ -83,7 +83,7 @@ export const PMS = {
   fv_fire_safety_concerns: 'fireSafety.observedConcerns  [GAPS §1.15]',
   fv_video_fire_exit: 'houseRules.fireSafetyInstructions.video  [NEW — confirm in hub]',
   fv_photo_fire_safety: 'profile.photos.url',
-  fv_common_area: 'commonAreas[]  [GAP — no commonAreas field on property in PMS schema]',
+  fv_common_area: 'commonAreas[]  [GAP — no commonAreas field; top-level is typed]',
 
   // ── Phase 6 · Cleaning & laundry ──────────────────────────────────────
   fv_cleaning_setup: 'operationalModel.cleaning  [GAPS §1.17]',
@@ -106,16 +106,16 @@ export const PMS = {
   fv_unit_location_in_building: 'profile.locationInBuilding',
   fv_unit_type_check: 'profile.unitType',
   // fv_unit_balcony_present → hub-only gate
-  fv_unit_balconies_count: 'balconies  [GAP — no balconies field on property in PMS schema]',
+  fv_unit_balconies_count: 'balconies', // CONFIRMED top-level field
   fv_view_actual: 'profile.viewType',
   // fv_view_comments → hub-only
-  fv_apartment_category: 'propertyCategory  [GAPS §1.8 quality-tier]',
+  fv_apartment_category: 'propertyCategory', // CONFIRMED top-level field
   fv_accessibility_unit_door_widths: 'accessibilityInfo.unitDoorWidths',
   fv_location_noise_level: 'operationalInfo.noiseLevel',
   fv_location_noise_source: 'operationalInfo.noiseSource',
 
   // ── Phase 9 · Unit capacity ───────────────────────────────────────────
-  fv_capacity_base: 'profile.baseCapacity  [GAP — no base-capacity field in PMS schema]',
+  fv_capacity_base: 'profile.baseCapacity  [freeform — profile accepts; maxOccupancy is the only typed capacity field]',
   fv_capacity_max: 'property.maxOccupancy', // CONFIRMED real field in PMS schema
   // fv_capacity_actual_setup → hub-only
   // fv_capacity_comments → hub-only
@@ -128,8 +128,8 @@ export const PMS = {
 
   // ── Phase 11 · Unit appliances & amenities (item repeater) ────────────
   // fv_items_to_log → hub-only gate
-  item_name: 'equipmentAndAmenities.name  [GAP — catalog-linked via resourceId; no free name field]',
-  item_kind: 'equipmentAndAmenities.kind  [GAP — no kind field in PMS schema]',
+  item_name: 'equipmentAndAmenities.name  [catalog — resolved from resourceId, not free-write]',
+  item_kind: 'equipmentAndAmenities.type  [catalog — resolved from resourceId]',
   item_brand: 'equipmentAndAmenities.brand', // CONFIRMED
   item_location: 'equipmentAndAmenities.location', // CONFIRMED
   item_instructions: 'equipmentAndAmenities.instructions', // CONFIRMED (array)
@@ -151,7 +151,7 @@ export const PMS = {
   fv_first_aid_location: 'houseRules.firstAidInstructions.description',
 
   // ── Phase 13 · Unit amenities & details ───────────────────────────────
-  fv_blackout_curtains: 'equipmentAndAmenities.name  [amenity entry]  [GAP — no name field; catalog resourceId only]',
+  fv_blackout_curtains: 'equipmentAndAmenities (amenity entry)  [catalog — name/type from resourceId]',
   fv_ceiling_height_m: 'profile.ceilingHeightM  [GAPS §1.24]',
 
   // ── Phase 14 · Unit photos & videos ───────────────────────────────────

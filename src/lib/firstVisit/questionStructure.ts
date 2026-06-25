@@ -91,7 +91,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "pms_target": "operationalInfo.constructionNearby"
   },
   "fv_building_amenities_verify": {
-    "pms_target": "equipmentAndAmenities.name  [GAP — equipmentAndAmenities is catalog-linked (resourceId); no free name field]"
+    "pms_target": "equipmentAndAmenities (amenity entries)  [catalog — name/type from resourceId]"
   },
   "fv_accessibility_step_free_entry": {
     "pms_target": "accessibilityInfo.stepFreeEntry"
@@ -304,7 +304,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_common_area": {
-    "pms_target": "commonAreas[]  [GAP — no commonAreas field on property in PMS schema]"
+    "pms_target": "commonAreas[]  [GAP — no commonAreas field; top-level is typed]"
   },
   "fv_cleaning_setup": {
     "pms_target": "operationalModel.cleaning  [GAPS §1.17]"
@@ -374,7 +374,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "pms_target": "profile.unitType"
   },
   "fv_unit_balconies_count": {
-    "pms_target": "balconies  [GAP — no balconies field on property in PMS schema]",
+    "pms_target": "balconies",
     "visible_when": {
       "question": "fv_unit_balcony_present",
       "equals": true
@@ -384,7 +384,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "pms_target": "profile.viewType"
   },
   "fv_apartment_category": {
-    "pms_target": "propertyCategory  [GAPS §1.8 quality-tier]"
+    "pms_target": "propertyCategory"
   },
   "fv_accessibility_unit_door_widths": {
     "pms_target": "accessibilityInfo.unitDoorWidths"
@@ -400,7 +400,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_capacity_base": {
-    "pms_target": "profile.baseCapacity  [GAP — no base-capacity field in PMS schema]"
+    "pms_target": "profile.baseCapacity  [freeform — profile accepts; maxOccupancy is the only typed capacity field]"
   },
   "fv_capacity_max": {
     "pms_target": "property.maxOccupancy"
@@ -479,7 +479,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "item_name": {
-    "pms_target": "equipmentAndAmenities.name  [GAP — catalog-linked via resourceId; no free name field]",
+    "pms_target": "equipmentAndAmenities.name  [catalog — resolved from resourceId, not free-write]",
     "group_id": "item",
     "visible_when": {
       "question": "fv_items_to_log",
@@ -487,7 +487,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "item_kind": {
-    "pms_target": "equipmentAndAmenities.kind  [GAP — no kind field in PMS schema]",
+    "pms_target": "equipmentAndAmenities.type  [catalog — resolved from resourceId]",
     "group_id": "item",
     "visible_when": {
       "question": "fv_items_to_log",
@@ -585,7 +585,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_blackout_curtains": {
-    "pms_target": "equipmentAndAmenities.name  [amenity entry]  [GAP — no name field; catalog resourceId only]"
+    "pms_target": "equipmentAndAmenities (amenity entry)  [catalog — name/type from resourceId]"
   },
   "fv_ceiling_height_m": {
     "pms_target": "profile.ceilingHeightM  [GAPS §1.24]"

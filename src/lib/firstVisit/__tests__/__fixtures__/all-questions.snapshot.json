@@ -426,7 +426,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.name  [GAP — equipmentAndAmenities is catalog-linked (resourceId); no free name field]",
+    "pms_target": "equipmentAndAmenities (amenity entries)  [catalog — name/type from resourceId]",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1352,7 +1352,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "commonAreas[]  [GAP — no commonAreas field on property in PMS schema]",
+    "pms_target": "commonAreas[]  [GAP — no commonAreas field; top-level is typed]",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1717,7 +1717,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "balconies  [GAP — no balconies field on property in PMS schema]",
+    "pms_target": "balconies",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1781,7 +1781,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "propertyCategory  [GAPS §1.8 quality-tier]",
+    "pms_target": "propertyCategory",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1870,7 +1870,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.baseCapacity  [GAP — no base-capacity field in PMS schema]",
+    "pms_target": "profile.baseCapacity  [freeform — profile accepts; maxOccupancy is the only typed capacity field]",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2263,7 +2263,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.name  [GAP — catalog-linked via resourceId; no free name field]",
+    "pms_target": "equipmentAndAmenities.name  [catalog — resolved from resourceId, not free-write]",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2285,7 +2285,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.kind  [GAP — no kind field in PMS schema]",
+    "pms_target": "equipmentAndAmenities.type  [catalog — resolved from resourceId]",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2685,7 +2685,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.name  [amenity entry]  [GAP — no name field; catalog resourceId only]",
+    "pms_target": "equipmentAndAmenities (amenity entry)  [catalog — name/type from resourceId]",
     "status": "existing",
     "verdict": null,
     "notes": null,
