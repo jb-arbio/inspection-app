@@ -3,9 +3,9 @@ import { validateExtraction } from '../validateExtraction';
 
 const TARGET = [
   'fv_location_quality',
-  'finding_item_name',
-  'finding_category',
-  'finding_cost_estimate_eur',
+  'issue_name',
+  'issue_type',
+  'issue_cost_estimate_eur',
 ];
 
 describe('validateExtraction', () => {
@@ -33,11 +33,11 @@ describe('validateExtraction', () => {
         singles: {},
         items: [
           {
-            group_id: 'finding',
+            group_id: 'issue',
             fields: {
-              finding_item_name: { value: 'Broken oven', confidence: 0.9 },
-              finding_category: { value: 'Appliance', confidence: 0.8 },
-              finding_cost_estimate_eur: { value: '200', confidence: 0.5 },
+              issue_name: { value: 'Broken oven', confidence: 0.9 },
+              issue_type: { value: 'Equipment', confidence: 0.8 },
+              issue_cost_estimate_eur: { value: '200', confidence: 0.5 },
             },
           },
         ],
@@ -45,8 +45,8 @@ describe('validateExtraction', () => {
       TARGET,
     );
     expect(r.items).toHaveLength(1);
-    expect(r.items[0].fields.finding_cost_estimate_eur.value).toBe(200);
-    expect(r.items[0].fields.finding_category.value).toBe('Appliance');
+    expect(r.items[0].fields.issue_cost_estimate_eur.value).toBe(200);
+    expect(r.items[0].fields.issue_type.value).toBe('Equipment');
   });
 
   it('drops an item missing its required name', () => {
@@ -54,7 +54,7 @@ describe('validateExtraction', () => {
       {
         singles: {},
         items: [
-          { group_id: 'finding', fields: { finding_category: { value: 'Appliance', confidence: 0.8 } } },
+          { group_id: 'issue', fields: { issue_type: { value: 'Equipment', confidence: 0.8 } } },
         ],
       },
       TARGET,

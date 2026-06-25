@@ -152,13 +152,15 @@ describe('computeProgressFromAnswers', () => {
 });
 
 describe('computeProgressFromAnswers phase filter', () => {
-  it('filtered deal progress for phases 1 and 11 sums to the unfiltered total', () => {
-    const whole = computeProgressFromAnswers('deal', []);
-    const meta = computeProgressFromAnswers('deal', [], ['1']);
-    const evaluation = computeProgressFromAnswers('deal', [], ['11']);
-    expect(meta.total + evaluation.total).toBe(whole.total);
-    expect(meta.total).toBeGreaterThan(0);
-    expect(evaluation.total).toBeGreaterThan(0);
+  it('filtered unit_category progress for two phase subsets sums to the unfiltered total', () => {
+    // unit_category spans phases 8..15. Splitting them into two disjoint subsets
+    // and filtering each must add back up to the unfiltered scope total.
+    const whole = computeProgressFromAnswers('unit_category', []);
+    const firstHalf = computeProgressFromAnswers('unit_category', [], ['8', '9', '10', '11']);
+    const secondHalf = computeProgressFromAnswers('unit_category', [], ['12', '13', '14', '15']);
+    expect(firstHalf.total + secondHalf.total).toBe(whole.total);
+    expect(firstHalf.total).toBeGreaterThan(0);
+    expect(secondHalf.total).toBeGreaterThan(0);
   });
 
   it('counts against an injected phases set, not the global config', () => {
@@ -214,18 +216,21 @@ describe('computeProgressFromAnswers phase filter', () => {
   });
 
   it('an answer only counts toward the card that contains its question', () => {
-    const meta = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['1'],
+    // fv_readiness_health_score lives in the unit_category "Final assessment"
+    // phase '15'. It must not count toward an unrelated phase card ('8'), only
+    // toward the card whose filter includes its phase ('15').
+    const identity = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['8'],
     );
-    const evaluation = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['11'],
+    const finalAssessment = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['15'],
     );
-    expect(meta.done).toBe(0);
-    expect(evaluation.done).toBe(1);
+    expect(identity.done).toBe(0);
+    expect(finalAssessment.done).toBe(1);
   });
 
   it('excludes required questions hidden by a visible_when gate from the denominator', () => {

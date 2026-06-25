@@ -11,9 +11,13 @@ import {
 
 describe('first-visit question config', () => {
   it('loads the generated JSON with metadata', () => {
-    expect(CONFIG_META.version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // Version is declared by content.json (redesign uses a labelled date string).
+    expect(CONFIG_META.version).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(CONFIG_META.counts.questions).toBe(ALL_QUESTIONS.length);
     expect(CONFIG_META.counts.phases).toBe(PHASES.length);
+    // Redesign V1 ships 15 phases / 135 questions.
+    expect(CONFIG_META.counts.phases).toBe(15);
+    expect(CONFIG_META.counts.questions).toBe(135);
   });
 
   it('every question has a known scope', () => {
@@ -64,19 +68,24 @@ describe('first-visit question config', () => {
     expect(ALL_QUESTIONS.find((q) => q.slug === 'fv_checkin_steps_count')).toBeUndefined();
   });
 
-  it('WS-C: fv_extra_services_offered is a multi-select with per-option follow-up', () => {
+  it('WS-C: fv_extra_services_offered is a multi-select (per-option follow-up removed in redesign)', () => {
     const q = ALL_QUESTIONS.find((x) => x.slug === 'fv_extra_services_offered');
     expect(q).toBeDefined();
     expect(q!.multi_select).toBe(true);
-    expect(q!.per_option_follow_up).toBeDefined();
-    expect(q!.per_option_follow_up!.label_template).toContain('{option}');
+    // The redesign dropped per-option follow-ups; the field is a plain multi-select.
+    expect(q!.per_option_follow_up).toBeUndefined();
+    expect(q!.options).toContain('None');
   });
 
-  it('WS-C: fv_fire_exit_secondary has a conditional follow-up triggered by Yes', () => {
+  it('WS-C: fv_fire_exit_secondary is gated by the building fire-safety question', () => {
+    // The redesign replaced the old follow_up wiring with a visible_when gate.
     const q = ALL_QUESTIONS.find((x) => x.slug === 'fv_fire_exit_secondary');
     expect(q).toBeDefined();
-    expect(q!.follow_up).toBeDefined();
-    expect(q!.follow_up!.when_value).toBe(true);
+    expect(q!.follow_up).toBeUndefined();
+    expect(q!.visible_when).toEqual({
+      question: 'fv_fire_safety_present',
+      equals: true,
+    });
   });
 
   it('groupIdFor returns the question group_id, or null when absent', () => {
