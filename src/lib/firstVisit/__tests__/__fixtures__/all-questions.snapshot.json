@@ -36,7 +36,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "locationProfile.quality  [proposed §1.6-related]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -79,7 +79,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "locationProfile.neighbourhoodNarrative  [proposed §1.6]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -96,7 +96,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "locationProfile.vibeTags  [proposed §1.6]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -125,7 +125,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "locationProfile.bestForGuestType  [proposed §1.6]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -167,7 +167,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessInfo.parking.type  [GAPS §1.25]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -213,7 +213,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessInfo.parking.spotNumber  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -305,7 +305,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessInfo.parking.bikeParkingAvailable  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -426,7 +426,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities (amenity entries)  [catalog — name/type from resourceId]",
+    "pms_target": "equipmentAndAmenities (amenity entries)",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -455,7 +455,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessibilityInfo.stepFreeEntry",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -476,7 +476,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessibilityInfo.ramps",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -493,7 +493,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessibilityInfo.notes",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -530,7 +530,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "otherDetails.elevator.status  [GAPS §1.20]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -555,7 +555,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "otherDetails.elevator.size  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -580,7 +580,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "otherDetails.elevator.condition  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -830,7 +830,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessInfo.overallNotes  [GAPS §1.21]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1026,7 +1026,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "operationalModel.trashHandler  [GAPS §1.18]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1073,7 +1073,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "houseRules.garbageDisposal.guestInstructions  [NEW — confirm in hub]",
+    "pms_target": "houseRules.garbageDisposal.guestInstructions",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1152,7 +1152,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.instructions.description",
+    "pms_target": "equipmentAndAmenities.instructions",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1176,7 +1176,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.instructions.description",
+    "pms_target": "equipmentAndAmenities.instructions",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1197,7 +1197,7 @@
   {
     "mode": "observe",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.videoUrl  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1238,7 +1238,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "fireSafety.secondaryExitPresent  [GAPS §1.15]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1283,7 +1283,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "fireSafety.observedConcerns  [GAPS §1.15]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1310,7 +1310,7 @@
   {
     "mode": "observe",
     "repeater": false,
-    "pms_target": "houseRules.fireSafetyInstructions.video  [NEW — confirm in hub]",
+    "pms_target": "houseRules.fireSafetyInstructions.video",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1352,7 +1352,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "commonAreas[]  [GAP — no commonAreas field; top-level is typed]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1381,7 +1381,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "operationalModel.cleaning  [GAPS §1.17]",
+    "pms_target": "operationalInfo.cleaning",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1403,7 +1403,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "operationalModel.laundry  [GAPS §1.17]",
+    "pms_target": "operationalInfo.laundry",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1511,7 +1511,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.wifiDetails.networkName  [NEW — confirm in hub]",
+    "pms_target": "profile.wifiDetails.networkName",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1532,7 +1532,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.wifiDetails.password  [NEW — confirm in hub]",
+    "pms_target": "profile.wifiDetails.password",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1553,7 +1553,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.wifiDetails.downloadSpeedMbps  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.downloadSpeedMbps",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1574,7 +1574,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.wifiDetails.uploadSpeedMbps  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.uploadSpeedMbps",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1616,7 +1616,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.wifiDetails.guestRouterAccess  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.guestRouterAccess",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1803,7 +1803,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "accessibilityInfo.unitDoorWidths",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1870,7 +1870,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.baseCapacity  [freeform — profile accepts; maxOccupancy is the only typed capacity field]",
+    "pms_target": "profile.baseCapacity",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1938,7 +1938,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "propertyAssessment.furnitureStatus  [proposed]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1960,7 +1960,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "propertyAssessment.equipmentStatus  [proposed]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -1981,7 +1981,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "propertyAssessment.bathroomCondition  [proposed]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2263,7 +2263,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.name  [catalog — resolved from resourceId, not free-write]",
+    "pms_target": "equipmentAndAmenities.name",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2285,7 +2285,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.type  [catalog — resolved from resourceId]",
+    "pms_target": "equipmentAndAmenities.type",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2404,7 +2404,7 @@
   {
     "mode": "observe",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.videoUrl  [GAP — no videoUrl in PMS schema]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2446,7 +2446,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.location  [NEW unit-level — confirm in hub]",
+    "pms_target": "equipmentAndAmenities.location",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2467,7 +2467,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities.instructions.description  [NEW unit-level — confirm in hub]",
+    "pms_target": "equipmentAndAmenities.instructions",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2529,7 +2529,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "fireSafety.extinguisherServiceDate  [GAPS §1.15]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2574,7 +2574,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "fireSafety.smokeDetectorWorking  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2619,7 +2619,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "fireSafety.coDetectorWorking  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2685,7 +2685,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "equipmentAndAmenities (amenity entry)  [catalog — name/type from resourceId]",
+    "pms_target": "equipmentAndAmenities (amenity entry)",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2706,7 +2706,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "profile.ceilingHeightM  [GAPS §1.24]",
+    "pms_target": "profile.ceilingHeightM",
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2812,7 +2812,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "status.hostStartDate  [NEW — confirm in hub]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,
@@ -2857,7 +2857,7 @@
   {
     "mode": "data",
     "repeater": false,
-    "pms_target": "OC.status.recommendationSummary  [GAPS §1.9]",
+    "pms_target": null,
     "status": "existing",
     "verdict": null,
     "notes": null,

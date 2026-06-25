@@ -11,23 +11,8 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   "fv_visit_visitor_name": {
     "pms_target": "SiteVisit.visitorName"
   },
-  "fv_location_quality": {
-    "pms_target": "locationProfile.quality  [proposed §1.6-related]"
-  },
   "fv_location_safety_concern": {
     "pms_target": "operationalInfo.safetyConcern"
-  },
-  "fv_neighbourhood_narrative": {
-    "pms_target": "locationProfile.neighbourhoodNarrative  [proposed §1.6]"
-  },
-  "fv_neighbourhood_vibe_tags": {
-    "pms_target": "locationProfile.vibeTags  [proposed §1.6]"
-  },
-  "fv_best_for_guest_type": {
-    "pms_target": "locationProfile.bestForGuestType  [proposed §1.6]"
-  },
-  "fv_parking_actual_type": {
-    "pms_target": "accessInfo.parking.type  [GAPS §1.25]"
   },
   "fv_parking_dedicated_spots": {
     "pms_target": "accessInfo.parking.numberOfSpaces",
@@ -39,7 +24,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_parking_spot_number": {
-    "pms_target": "accessInfo.parking.spotNumber  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_parking_actual_type",
       "not_in": [
@@ -75,9 +59,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
       ]
     }
   },
-  "fv_parking_bike_available": {
-    "pms_target": "accessInfo.parking.bikeParkingAvailable  [NEW — confirm in hub]"
-  },
   "fv_parking_nearby_options": {
     "pms_target": "nearby.description"
   },
@@ -91,33 +72,21 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "pms_target": "operationalInfo.constructionNearby"
   },
   "fv_building_amenities_verify": {
-    "pms_target": "equipmentAndAmenities (amenity entries)  [catalog — name/type from resourceId]"
-  },
-  "fv_accessibility_step_free_entry": {
-    "pms_target": "accessibilityInfo.stepFreeEntry"
-  },
-  "fv_accessibility_ramps": {
-    "pms_target": "accessibilityInfo.ramps"
-  },
-  "fv_accessibility_notes": {
-    "pms_target": "accessibilityInfo.notes"
+    "pms_target": "equipmentAndAmenities (amenity entries)"
   },
   "fv_building_elevator_working": {
-    "pms_target": "otherDetails.elevator.status  [GAPS §1.20]",
     "visible_when": {
       "question": "fv_building_elevator_present",
       "equals": true
     }
   },
   "fv_building_elevator_size": {
-    "pms_target": "otherDetails.elevator.size  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_building_elevator_present",
       "equals": true
     }
   },
   "fv_building_elevator_condition": {
-    "pms_target": "otherDetails.elevator.condition  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_building_elevator_present",
       "equals": true
@@ -167,9 +136,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "mode": "observe",
     "pms_target": "accessInfo.checkInSteps.videoUrl"
   },
-  "fv_checkin_notes_overall": {
-    "pms_target": "accessInfo.overallNotes  [GAPS §1.21]"
-  },
   "fv_checkin_complexity": {
     "pms_target": "operationalInfo.checkinComplexity"
   },
@@ -213,7 +179,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_trash_handler": {
-    "pms_target": "operationalModel.trashHandler  [GAPS §1.18]",
     "visible_when": {
       "question": "fv_trash_area_present",
       "equals": true
@@ -227,7 +192,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_trash_guest_instructions": {
-    "pms_target": "houseRules.garbageDisposal.guestInstructions  [NEW — confirm in hub]"
+    "pms_target": "houseRules.garbageDisposal.guestInstructions"
   },
   "fv_video_trash_location": {
     "mode": "observe",
@@ -245,14 +210,14 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_fusebox_access": {
-    "pms_target": "equipmentAndAmenities.instructions.description",
+    "pms_target": "equipmentAndAmenities.instructions",
     "visible_when": {
       "question": "fv_fusebox_present",
       "equals": true
     }
   },
   "fv_fusebox_reset_instructions": {
-    "pms_target": "equipmentAndAmenities.instructions.description",
+    "pms_target": "equipmentAndAmenities.instructions",
     "visible_when": {
       "question": "fv_fusebox_present",
       "equals": true
@@ -260,14 +225,12 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   },
   "fv_video_fusebox": {
     "mode": "observe",
-    "pms_target": "equipmentAndAmenities.videoUrl  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_fusebox_present",
       "equals": true
     }
   },
   "fv_fire_exit_secondary": {
-    "pms_target": "fireSafety.secondaryExitPresent  [GAPS §1.15]",
     "visible_when": {
       "question": "fv_fire_safety_present",
       "equals": true
@@ -281,7 +244,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_fire_safety_concerns": {
-    "pms_target": "fireSafety.observedConcerns  [GAPS §1.15]",
     "visible_when": {
       "question": "fv_fire_safety_present",
       "equals": true
@@ -289,7 +251,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   },
   "fv_video_fire_exit": {
     "mode": "observe",
-    "pms_target": "houseRules.fireSafetyInstructions.video  [NEW — confirm in hub]",
+    "pms_target": "houseRules.fireSafetyInstructions.video",
     "visible_when": {
       "question": "fv_fire_safety_present",
       "equals": true
@@ -303,14 +265,11 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
       "equals": true
     }
   },
-  "fv_common_area": {
-    "pms_target": "commonAreas[]  [GAP — no commonAreas field; top-level is typed]"
-  },
   "fv_cleaning_setup": {
-    "pms_target": "operationalModel.cleaning  [GAPS §1.17]"
+    "pms_target": "operationalInfo.cleaning"
   },
   "fv_laundry_setup": {
-    "pms_target": "operationalModel.laundry  [GAPS §1.17]"
+    "pms_target": "operationalInfo.laundry"
   },
   "fv_laundry_delivery_frequency": {
     "pms_target": "equipmentAndAmenities.notes",
@@ -323,28 +282,28 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     "pms_target": "nearby.title"
   },
   "fv_wifi_ssid": {
-    "pms_target": "profile.wifiDetails.networkName  [NEW — confirm in hub]",
+    "pms_target": "profile.wifiDetails.networkName",
     "visible_when": {
       "question": "fv_wifi_present",
       "equals": true
     }
   },
   "fv_wifi_password": {
-    "pms_target": "profile.wifiDetails.password  [NEW — confirm in hub]",
+    "pms_target": "profile.wifiDetails.password",
     "visible_when": {
       "question": "fv_wifi_present",
       "equals": true
     }
   },
   "fv_wifi_download_speed_mbps": {
-    "pms_target": "profile.wifiDetails.downloadSpeedMbps  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.downloadSpeedMbps",
     "visible_when": {
       "question": "fv_wifi_present",
       "equals": true
     }
   },
   "fv_wifi_upload_speed_mbps": {
-    "pms_target": "profile.wifiDetails.uploadSpeedMbps  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.uploadSpeedMbps",
     "visible_when": {
       "question": "fv_wifi_present",
       "equals": true
@@ -358,7 +317,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_wifi_guest_router_access": {
-    "pms_target": "profile.wifiDetails.guestRouterAccess  [GAPS §1.16]",
+    "pms_target": "profile.wifiDetails.guestRouterAccess",
     "visible_when": {
       "question": "fv_wifi_present",
       "equals": true
@@ -386,9 +345,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   "fv_apartment_category": {
     "pms_target": "propertyCategory"
   },
-  "fv_accessibility_unit_door_widths": {
-    "pms_target": "accessibilityInfo.unitDoorWidths"
-  },
   "fv_location_noise_level": {
     "pms_target": "operationalInfo.noiseLevel"
   },
@@ -400,19 +356,10 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_capacity_base": {
-    "pms_target": "profile.baseCapacity  [freeform — profile accepts; maxOccupancy is the only typed capacity field]"
+    "pms_target": "profile.baseCapacity"
   },
   "fv_capacity_max": {
     "pms_target": "property.maxOccupancy"
-  },
-  "fv_furniture_status": {
-    "pms_target": "propertyAssessment.furnitureStatus  [proposed]"
-  },
-  "fv_equipment_status": {
-    "pms_target": "propertyAssessment.equipmentStatus  [proposed]"
-  },
-  "fv_bathroom_condition": {
-    "pms_target": "propertyAssessment.bathroomCondition  [proposed]"
   },
   "issue_name": {
     "group_id": "issue",
@@ -479,7 +426,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "item_name": {
-    "pms_target": "equipmentAndAmenities.name  [catalog — resolved from resourceId, not free-write]",
+    "pms_target": "equipmentAndAmenities.name",
     "group_id": "item",
     "visible_when": {
       "question": "fv_items_to_log",
@@ -487,7 +434,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "item_kind": {
-    "pms_target": "equipmentAndAmenities.type  [catalog — resolved from resourceId]",
+    "pms_target": "equipmentAndAmenities.type",
     "group_id": "item",
     "visible_when": {
       "question": "fv_items_to_log",
@@ -528,7 +475,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   },
   "item_video": {
     "mode": "observe",
-    "pms_target": "equipmentAndAmenities.videoUrl  [GAP — no videoUrl in PMS schema]",
     "group_id": "item",
     "visible_when": {
       "question": "fv_items_to_log",
@@ -536,14 +482,14 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_unit_fusebox_location": {
-    "pms_target": "equipmentAndAmenities.location  [NEW unit-level — confirm in hub]",
+    "pms_target": "equipmentAndAmenities.location",
     "visible_when": {
       "question": "fv_unit_fusebox_present",
       "equals": true
     }
   },
   "fv_unit_fusebox_reset_instructions": {
-    "pms_target": "equipmentAndAmenities.instructions.description  [NEW unit-level — confirm in hub]",
+    "pms_target": "equipmentAndAmenities.instructions",
     "visible_when": {
       "question": "fv_unit_fusebox_present",
       "equals": true
@@ -557,21 +503,18 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_fire_extinguisher_service_date": {
-    "pms_target": "fireSafety.extinguisherServiceDate  [GAPS §1.15]",
     "visible_when": {
       "question": "fv_fire_extinguisher_present",
       "equals": true
     }
   },
   "fv_smoke_detector_working": {
-    "pms_target": "fireSafety.smokeDetectorWorking  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_smoke_detector_present",
       "equals": true
     }
   },
   "fv_co_detector_working": {
-    "pms_target": "fireSafety.coDetectorWorking  [NEW — confirm in hub]",
     "visible_when": {
       "question": "fv_co_detector_present",
       "equals": true
@@ -585,10 +528,10 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
     }
   },
   "fv_blackout_curtains": {
-    "pms_target": "equipmentAndAmenities (amenity entry)  [catalog — name/type from resourceId]"
+    "pms_target": "equipmentAndAmenities (amenity entry)"
   },
   "fv_ceiling_height_m": {
-    "pms_target": "profile.ceilingHeightM  [GAPS §1.24]"
+    "pms_target": "profile.ceilingHeightM"
   },
   "fv_photo_bathroom": {
     "mode": "observe",
@@ -609,13 +552,7 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   "fv_readiness_overall": {
     "pms_target": "status.readinessStatus"
   },
-  "fv_readiness_host_start_date": {
-    "pms_target": "status.hostStartDate  [NEW — confirm in hub]"
-  },
   "fv_readiness_health_score": {
     "pms_target": "status.healthLevel"
-  },
-  "fv_readiness_recommendation_summary": {
-    "pms_target": "OC.status.recommendationSummary  [GAPS §1.9]"
   }
 };
