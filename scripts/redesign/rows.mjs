@@ -202,6 +202,12 @@ export const PHASES = [
     { slug: 'fv_unit_location_in_building', label: 'Unit number / location (e.g. links · rechts · Mitte)', type: 'text', required: false },
     { slug: 'fv_unit_type_check', label: 'Unit type', type: 'select',
       options: ['Apartment', 'Studio', 'Loft', 'Maisonette', 'Other'], required: true },
+    // Kept with the identity block (after unit type) so the p8_identity voice
+    // prompt's fields are contiguous below the prompt — no unrelated questions
+    // wedged between the prompt and the fields it fills.
+    { slug: 'fv_apartment_category', label: 'Apartment category', type: 'select',
+      options: ['Premium', 'Standard', 'Midscale', 'Below standard'], required: true,
+      description: 'Tiers anchored on finish quality, furnishing completeness, size and amenities — validate definitions with GX.' },
     { slug: 'fv_unit_balcony_present', label: 'Is there a balcony?', type: 'boolean', options: YESNO, required: true,
       description: 'Gate: when "No", balcony count collapses.' },
     { slug: 'fv_unit_balconies_count', label: 'Number of balconies', type: 'number', required: false,
@@ -209,16 +215,15 @@ export const PHASES = [
     { slug: 'fv_view_actual', label: 'Unit view', type: 'select',
       options: ['Busy street', 'Quiet side street', 'City square', 'Courtyard', 'Monument', 'Park', 'Waterfront', 'Other'], required: false },
     { slug: 'fv_view_comments', label: 'View comments', type: 'text', required: false },
-    { slug: 'fv_apartment_category', label: 'Apartment category', type: 'select',
-      options: ['Premium', 'Standard', 'Midscale', 'Below standard'], required: true,
-      description: 'Tiers anchored on finish quality, furnishing completeness, size and amenities — validate definitions with GX.' },
-    { slug: 'fv_accessibility_unit_door_widths', label: 'Apartment + bathroom door clear widths', type: 'text', required: false },
     { slug: 'fv_location_noise_level', label: 'Noise heard with windows closed?', type: 'select',
       options: ['No', 'Yes-not disturbing', 'Yes-occasionally', 'Yes-regularly'], required: true,
       description: 'Gate: noise source shows unless "No".' },
     { slug: 'fv_location_noise_source', label: 'Noise source', type: 'select',
       options: ['Street', 'Tram/train', 'Neighbors', 'Construction', 'Aircraft', 'Other'], required: false,
       visible_when: { question: 'fv_location_noise_level', not_equals: 'No' } },
+    // Non-voiced precise measurement (manual tap, see section-voice-prompts) —
+    // parked at the end so it doesn't interrupt the view/noise voiced block.
+    { slug: 'fv_accessibility_unit_door_widths', label: 'Apartment + bathroom door clear widths', type: 'text', required: false },
   ]},
 
   // ── 9 · Unit capacity (unit_category) ────────────────────────────────────

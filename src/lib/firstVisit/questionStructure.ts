@@ -332,6 +332,9 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   "fv_unit_type_check": {
     "pms_target": "profile.unitType"
   },
+  "fv_apartment_category": {
+    "pms_target": "propertyCategory"
+  },
   "fv_unit_balconies_count": {
     "pms_target": "balconies",
     "visible_when": {
@@ -341,9 +344,6 @@ export const QUESTION_STRUCTURE: StructureOverlay = {
   },
   "fv_view_actual": {
     "pms_target": "profile.viewType"
-  },
-  "fv_apartment_category": {
-    "pms_target": "propertyCategory"
   },
   "fv_location_noise_level": {
     "pms_target": "operationalInfo.noiseLevel"

@@ -42,6 +42,11 @@ export function useSectionVoiceFill(opts: Options) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [summary, setSummary] = useState<VoiceFillSummary | null>(null);
   const [error, setError] = useState(false);
+  // Which prompt's fill errored. Kept separate from `activePromptId` (which is
+  // reset to null the moment recording stops) so the failure message can still
+  // render against the right prompt AFTER the clip is processed. Without this,
+  // a transcribe/extract failure was silently swallowed — the user saw nothing.
+  const [errorPromptId, setErrorPromptId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
   const startedAt = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,6 +77,7 @@ export function useSectionVoiceFill(opts: Options) {
       if (status !== 'idle') return;
       if (!navigator.onLine) return;
       setError(false);
+      setErrorPromptId(null);
       setSummary(null);
       setAccepted(false);
       lastRows.current = [];
@@ -133,7 +139,10 @@ export function useSectionVoiceFill(opts: Options) {
         });
       }
     } catch {
-      if (mounted.current) setError(true);
+      if (mounted.current) {
+        setError(true);
+        setErrorPromptId(promptId);
+      }
     } finally {
       if (mounted.current) {
         setStatus('idle');
@@ -160,6 +169,7 @@ export function useSectionVoiceFill(opts: Options) {
     elapsedMs,
     summary,
     error,
+    errorPromptId,
     accepted,
     canAcceptAll,
     interim: captions.interim,
@@ -168,3 +178,8 @@ export function useSectionVoiceFill(opts: Options) {
     acceptAll,
   };
 }
+
+// The full fill controller returned by useSectionVoiceFill. Consumers (the
+// inline VoicePromptCard) receive this so a single phase-level hook can drive
+// every prompt card co-located with its fields.
+export type SectionVoiceFill = ReturnType<typeof useSectionVoiceFill>;
