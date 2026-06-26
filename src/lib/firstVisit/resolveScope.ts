@@ -10,6 +10,20 @@ export type InspectionScopeContext = {
   unit_category_id?: string;
 };
 
+// Human-readable label for a scope, shown as a chip on survey section headers
+// so it's clear what level a question pertains to (e.g. "Maintenance work (€)"
+// — is it about the unit, the building, or the visit?). Field feedback §3.1.
+export function scopeLabel(scope: HubScope): string {
+  switch (scope) {
+    case 'deal':
+      return 'Visit';
+    case 'location':
+      return 'Building/Property';
+    case 'unit_category':
+      return 'Unit';
+  }
+}
+
 // Map a question's scope to the concrete scope_id used in
 // onboarding.data_point_values.scope_id.
 export function resolveScopeId(

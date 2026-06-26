@@ -1,6 +1,6 @@
 'use client';
 
-export type DictationStatus = 'idle' | 'recording' | 'transcribing';
+export type DictationStatus = 'idle' | 'recording' | 'transcribing' | 'error';
 
 export type VoiceDictationButtonProps = {
   status: DictationStatus;
@@ -63,6 +63,29 @@ export function VoiceDictationButton({
           className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
         >
           Stop
+        </button>
+      </span>
+    );
+  }
+
+  if (status === 'error') {
+    // Transcription failed. Surface it visibly + announce it, and let the same
+    // button restart a recording (retry) so an error never blocks the field.
+    return (
+      <span
+        role="status"
+        aria-live="assertive"
+        className="inline-flex items-center gap-1 text-xs font-medium text-red-600"
+      >
+        <button
+          type="button"
+          aria-label="Transcription failed — tap to retry"
+          disabled={!online}
+          onClick={onStart}
+          className="inline-flex items-center gap-1 rounded-md border border-red-300 px-2 py-1 text-xs hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span aria-hidden="true">⚠️🎙️</span>
+          <span>Transcription failed — tap to retry</span>
         </button>
       </span>
     );

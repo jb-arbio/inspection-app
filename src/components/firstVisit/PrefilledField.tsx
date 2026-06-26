@@ -5,6 +5,7 @@ import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRi
 import { VoiceDictationButton, type DictationStatus } from '@/components/firstVisit/VoiceDictationButton';
 import { useVoiceDictation } from '@/lib/firstVisit/useVoiceDictation';
 import { appendDictation } from '@/lib/firstVisit/appendDictation';
+import { ScaleField } from '@/components/firstVisit/ScaleField';
 
 export type PrefilledFieldProps = {
   question: FirstVisitQuestion;
@@ -25,6 +26,96 @@ const LOW_CONF_THRESHOLD = 0.6;
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Caret-stable text editing. A naively-controlled input (value={value}) resets
+// the caret to start/end on mid-string edits: each keystroke round-trips through
+// async autosave/parent state, and when the lagging value echoes back React
+// rewrites the DOM value via its internal value tracker, which moves the caret.
+//
+// Fix: make the element UNCONTROLLED (defaultValue, the DOM owns the text while
+// the user types) and only write the prop value back IMPERATIVELY when it
+// changes from an EXTERNAL source — voice-append, Accept-prefilled, skip/undo,
+// or the branching clear-on-hide.
+//
+// Distinguishing external writes from the user's own keystroke echoes by
+// value-comparison alone is NOT enough under fast typing: each keystroke
+// round-trips through async autosave, so when a user types "a" then "b" before
+// the first echo returns, the STALE echo "a" arrives while the DOM already
+// shows "ab". That stale "a" equals neither the latest emit ("ab") nor the DOM
+// ("ab"), so a naive guard would write it — visibly reverting the text and
+// jumping the caret until the next echo restores it.
+//
+// The clean rule keys off FOCUS instead: while the element is focused, the user
+// is actively typing and the DOM is authoritative — EVERY incoming value is an
+// echo of their own edit stream (current or stale), so we never write it. Only
+// when the element is NOT focused do we adopt external values. This is correct
+// for every external source in this app because they all blur the input first:
+// voice (tapping the mic button), Accept (tabIndex=-1 button), skip/undo
+// buttons, date-autofill (programmatic, on mount), and clear-on-hide
+// (programmatic). If a genuine external write could ever land while the field
+// is focused, this would need superseded-emit tracking instead — but none can.
+//
+// Returns a ref to attach to the element, the initial defaultValue, and an
+// onChange that forwards the live DOM value upward without re-controlling it.
+function useEchoInput(
+  value: string,
+  emit: (next: string) => void,
+  // Fires after an EXTERNAL value is written into the DOM (e.g. so a textarea
+  // can re-run its auto-grow). Not called for the user's own keystroke echoes.
+  onExternalSync?: () => void,
+): {
+  ref: (el: HTMLInputElement | HTMLTextAreaElement | null) => void;
+  defaultValue: string;
+  onChange: (next: string) => void;
+} {
+  const elRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  // Initial value captured once for defaultValue — the DOM owns it afterward.
+  // useState (not a ref) so we can read it during render without lint noise.
+  const [initialValue] = useState(value);
+  // Last value we emitted upward; seeded so the first render isn't "external".
+  const lastEmittedRef = useRef(value);
+  const onExternalSyncRef = useRef(onExternalSync);
+  // Keep the callback ref current without mutating during render (react-hooks/refs).
+  // No dep array → runs after every commit, always tracking the latest callback.
+  useEffect(() => {
+    onExternalSyncRef.current = onExternalSync;
+  });
+
+  const ref = useCallback(
+    (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+      elRef.current = el;
+    },
+    [],
+  );
+
+  // Sync EXTERNAL prop changes into the DOM imperatively, after commit.
+  useLayoutEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    // While focused, the user is typing: the DOM is authoritative and every
+    // incoming value is an echo of their own edit stream (possibly a STALE one
+    // under fast typing). Never write into a focused field — that prevents the
+    // stale-echo clobber that would revert text and jump the caret.
+    if (document.activeElement === el) {
+      lastEmittedRef.current = value;
+      return;
+    }
+    if (value === el.value) return; // already displayed (idempotent)
+    el.value = value; // not focused → genuine external source, adopt it
+    lastEmittedRef.current = value;
+    onExternalSyncRef.current?.();
+  }, [value]);
+
+  const onChange = useCallback(
+    (next: string) => {
+      lastEmittedRef.current = next;
+      emit(next);
+    },
+    [emit],
+  );
+
+  return { ref, defaultValue: initialValue, onChange };
 }
 
 // How long the "✓ Saved" pill stays visible before fading out.
@@ -86,6 +177,23 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
   }, [triggerSaved]);
 
   useEffect(() => clearTimers, [clearTimers]);
+
+  // Text + textarea use a local echo buffer to keep the caret stable on
+  // mid-string edits (see useEchoInput). Only these two branches need it; the
+  // number/date/select/boolean/scale branches have no mid-string caret problem.
+  // Shared keystroke handler for the single-line input and the textarea: forward
+  // the value up and pulse the debounced "saved" confirmation.
+  const emitText = useCallback(
+    (next: string) => {
+      onChange({ value: next, wasAcceptedAsIs: false });
+      pulseDebounced();
+    },
+    [onChange, pulseDebounced],
+  );
+  const valueStr = value == null ? '' : String(value);
+  // Single-line input gets a caret-stable echo handle here. The textarea owns
+  // its own useEchoInput internally (it also needs resize on external sync).
+  const textInput = useEchoInput(valueStr, emitText);
 
   // Auto-fill date fields with today's date once on mount, so the inspector
   // confirms by leaving it rather than typing it. They can clear or change it.
@@ -184,24 +292,19 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
       {question.type === 'text' && !isLongText && (
         <input
           id={id}
+          ref={textInput.ref as (el: HTMLInputElement | null) => void}
           disabled={isTranscribing}
           className="rounded-md border border-gray-300 px-3 py-2 text-base disabled:bg-gray-50 disabled:opacity-60"
-          value={value == null ? '' : String(value)}
-          onChange={(e) => {
-            onChange({ value: e.target.value, wasAcceptedAsIs: false });
-            pulseDebounced();
-          }}
+          defaultValue={textInput.defaultValue}
+          onChange={(e) => textInput.onChange(e.target.value)}
         />
       )}
       {question.type === 'text' && isLongText && (
         <AutoGrowTextarea
           id={id}
           disabled={isTranscribing}
-          value={value == null ? '' : String(value)}
-          onChange={(v) => {
-            onChange({ value: v, wasAcceptedAsIs: false });
-            pulseDebounced();
-          }}
+          value={valueStr}
+          onChange={emitText}
         />
       )}
       {question.type === 'text' && (
@@ -260,6 +363,14 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
           ))}
         </select>
       )}
+      {question.type === 'scale' && (
+        <ScaleField
+          question={question}
+          value={value}
+          onChange={onChange}
+          onSelected={pulseImmediate}
+        />
+      )}
       {question.type === 'boolean' && (
         <div className="flex gap-2">
           {/* Hidden input keeps label htmlFor target resolvable for a11y/tests */}
@@ -304,6 +415,12 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
 // stay visible without an inner scroll-trap. Min-height matches the old
 // rows={3} baseline; max-height is intentionally unset so the card simply
 // expands inside the surrounding flex column.
+// Uncontrolled (defaultValue) to keep the caret stable on mid-string edits —
+// see useEchoInput. The shared element ref comes from useEchoInput via inputRef
+// so the parent can imperatively push external value changes (voice/Accept).
+// We keep a local handle to the same node for auto-grow, and resize on every
+// input event plus once on mount; because the element is uncontrolled there's
+// no `value` prop to key the resize off, so we drive it from the live content.
 function AutoGrowTextarea({
   id,
   value,
@@ -316,21 +433,37 @@ function AutoGrowTextarea({
   disabled?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
-  useLayoutEffect(() => {
+  const resize = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
+  }, []);
+  // Own caret-stable echo handle. resize() runs when an external value (voice
+  // append / Accept) is written, since the uncontrolled element has no `value`
+  // prop to key the auto-grow effect off.
+  const echo = useEchoInput(value, onChange, resize);
+  const setRef = useCallback(
+    (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+      ref.current = el as HTMLTextAreaElement | null;
+      echo.ref(el);
+    },
+    [echo],
+  );
+  // Resize once after mount for the seeded default value.
+  useLayoutEffect(resize, [resize]);
   return (
     <textarea
-      ref={ref}
+      ref={setRef}
       id={id}
       rows={3}
       disabled={disabled}
       className="min-h-[5.25rem] resize-none overflow-hidden rounded-md border border-gray-300 px-3 py-2 text-base disabled:bg-gray-50 disabled:opacity-60"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+      defaultValue={echo.defaultValue}
+      onChange={(e) => {
+        echo.onChange(e.target.value);
+        resize();
+      }}
     />
   );
 }

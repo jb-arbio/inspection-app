@@ -11,6 +11,20 @@ export async function sha256(blob: Blob): Promise<string> {
     .map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Deletes a media row from Dexie and — only if it had already been uploaded —
+ * enqueues a server-side delete. A never-uploaded local blob has no server
+ * counterpart, so no outbox job is needed.
+ */
+export async function deleteMedia(id: string): Promise<void> {
+  const row = await localDb.media.get(id);
+  if (!row) return;
+  await localDb.media.delete(id);
+  if (row.uploaded_at) {
+    await enqueue('media_delete', { id });
+  }
+}
+
 export function useMediaCapture(inspectionId: string) {
   const persist = useCallback(
     async (blob: Blob, kind: 'photo'|'video'|'audio', meta: { target_id: string; area_key: string; question_key?: string; answer_id?: string }) => {
@@ -37,5 +51,6 @@ export function useMediaCapture(inspectionId: string) {
     },
     [inspectionId],
   );
-  return { persist };
+  const remove = useCallback((id: string) => deleteMedia(id), []);
+  return { persist, remove };
 }

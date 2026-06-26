@@ -75,6 +75,18 @@ export function createHandlers(): JobHandlers {
     media_metadata: async () => {
       /* handled inside media_upload */
     },
+    media_delete: async (p) => {
+      const { id } = p as { id: string };
+      const res = await fetch(
+        `/api/first-visit/media?id=${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) {
+        throw new Error(
+          `/api/first-visit/media DELETE -> ${res.status} ${await res.text()}`,
+        );
+      }
+    },
     submit: async (p) => {
       await postJSON('/api/first-visit/submit', p);
     },

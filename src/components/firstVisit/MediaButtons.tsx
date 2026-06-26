@@ -1,6 +1,7 @@
 'use client';
 import { useRef } from 'react';
 import { useMediaCapture } from '@/lib/firstVisit/useMediaCapture';
+import { MediaGallery } from './MediaGallery';
 
 type MediaKind = 'photo' | 'video';
 
@@ -55,6 +56,12 @@ export function MediaButtons({
           <MediaRow key={kind} kind={kind} onPick={(f) => onPick(kind, f)} />
         ))}
       </div>
+      <MediaGallery
+        inspectionId={inspectionId}
+        targetId={targetId}
+        areaKey={areaKey}
+        questionKey={questionKey}
+      />
     </div>
   );
 }

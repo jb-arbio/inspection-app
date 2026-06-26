@@ -11,6 +11,10 @@ import { buildSurveyConfig, type ContentConfig } from './surveyConfig';
 export type FieldType =
   | 'text'
   | 'select'
+  // Segmented single-select: a tap-friendly row of buttons (one per `options`
+  // entry), same data shape as 'select'. Rendered by ScaleField (merged from
+  // upstream); unused by the current redesign content but kept for parity.
+  | 'scale'
   | 'boolean'
   | 'number'
   | 'date'

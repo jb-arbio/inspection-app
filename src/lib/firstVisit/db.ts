@@ -77,6 +77,7 @@ export type OutboxJob = {
     | 'answer_upsert'
     | 'media_upload'
     | 'media_metadata'
+    | 'media_delete'
     | 'submit'
     | 'discard';
   payload: unknown;
