@@ -1,6 +1,6 @@
 {
   "version": "2026-06-25-redesign-v1",
-  "generated_at": "2026-06-25T00:00:00Z",
+  "generated_at": null,
   "phases": [
     {
       "id": "1",
@@ -1122,6 +1122,22 @@
           "phase_label": "Unit identity"
         },
         {
+          "slug": "fv_apartment_category",
+          "label": "Apartment category",
+          "description": "Tiers anchored on finish quality, furnishing completeness, size and amenities — validate definitions with GX.",
+          "scope": "unit_category",
+          "type": "select",
+          "options": [
+            "Premium",
+            "Standard",
+            "Midscale",
+            "Below standard"
+          ],
+          "required": true,
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        },
+        {
           "slug": "fv_unit_balcony_present",
           "label": "Is there a balcony?",
           "description": "Gate: when \"No\", balcony count collapses.",
@@ -1178,33 +1194,6 @@
           "phase_label": "Unit identity"
         },
         {
-          "slug": "fv_apartment_category",
-          "label": "Apartment category",
-          "description": "Tiers anchored on finish quality, furnishing completeness, size and amenities — validate definitions with GX.",
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Premium",
-            "Standard",
-            "Midscale",
-            "Below standard"
-          ],
-          "required": true,
-          "phase_id": "8",
-          "phase_label": "Unit identity"
-        },
-        {
-          "slug": "fv_accessibility_unit_door_widths",
-          "label": "Apartment + bathroom door clear widths",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "8",
-          "phase_label": "Unit identity"
-        },
-        {
           "slug": "fv_location_noise_level",
           "label": "Noise heard with windows closed?",
           "description": "Gate: noise source shows unless \"No\".",
@@ -1234,6 +1223,17 @@
             "Aircraft",
             "Other"
           ],
+          "required": false,
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        },
+        {
+          "slug": "fv_accessibility_unit_door_widths",
+          "label": "Apartment + bathroom door clear widths",
+          "description": null,
+          "scope": "unit_category",
+          "type": "text",
+          "options": [],
           "required": false,
           "phase_id": "8",
           "phase_label": "Unit identity"

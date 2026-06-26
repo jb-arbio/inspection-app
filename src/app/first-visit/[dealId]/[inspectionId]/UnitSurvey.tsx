@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   filterPhasesForScope,
   areaKeyFor,
@@ -29,7 +29,9 @@ import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { repeaterGroupMeta } from '@/lib/firstVisit/repeaterGroups';
 import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
-import { SectionVoicePrompts } from '@/components/firstVisit/SectionVoicePrompts';
+import { VoicePromptCard } from '@/components/firstVisit/SectionVoicePrompts';
+import { useSectionVoiceFill } from '@/lib/firstVisit/useSectionVoiceFill';
+import { promptsForPhase } from '@/data/section-voice-prompts';
 import { isAiSnapshot, unwrapAiSnapshot } from '@/lib/firstVisit/aiFill';
 
 // A target the survey is rendering for. The deal-scoped visit root is a
@@ -63,6 +65,8 @@ export function UnitSurvey({
   // Keys of fields just populated by a voice fill — drives the transient
   // "✦ from voice" highlight; cleared after a short delay.
   const [justFilledKeys, setJustFilledKeys] = useState<Set<string>>(new Set());
+  // Answer key the survey should scroll to after a voice fill (see mergeAiRows).
+  const [scrollTargetKey, setScrollTargetKey] = useState<string | null>(null);
   // WS-F media anchoring: pull photo/video file-questions out of their own
   // phase ("Property documentation", "Unit photos & videos") and inline them
   // under their related data question. We build the map across the whole
@@ -291,12 +295,24 @@ export function UnitSurvey({
   // dependent's rule. Rebuilt each render from the live answers map. Repeater
   // (step-indexed) answers are excluded — branching controllers are
   // single-instance questions.
+  // A controller's confirmed value wins; but an UNCONFIRMED voice suggestion
+  // (value:null, snapshot holds the proposed value) still reveals its dependent
+  // fields. Otherwise a voice-filled gate (e.g. "Elevator present? → Yes") would
+  // stay closed — burying its suggestions behind a collapsed section — until the
+  // inspector manually Accepted the gate. The dependents render with their own
+  // Accept-able suggestions; clearing/rejecting the gate re-hides them.
   const valueByKey = useMemo(() => {
     const m = new Map<string, unknown>();
     for (const a of Object.values(answers)) {
       if (a.target_id !== target.id) continue;
       if (a.step_index != null) continue;
-      m.set(a.question_key, a.value);
+      if (a.value != null) {
+        m.set(a.question_key, a.value);
+      } else if (isAiSnapshot(a.hub_suggestion_snapshot)) {
+        m.set(a.question_key, unwrapAiSnapshot(a.hub_suggestion_snapshot));
+      } else {
+        m.set(a.question_key, a.value);
+      }
     }
     return m;
   }, [answers, target.id]);
@@ -362,8 +378,38 @@ export function UnitSurvey({
       return next;
     });
     setJustFilledKeys(new Set(keys));
+    // Make the fill obvious: scroll the first filled SINGLE field into view
+    // (repeater items append below the prompt the inspector is already looking
+    // at). Falls back to the first row when the clip only filled a repeater.
+    const firstSingle = rows.find((r) => r.step_index == null) ?? rows[0];
+    setScrollTargetKey(rowKey(firstSingle));
     setTimeout(() => setJustFilledKeys(new Set()), 2500);
   };
+
+  // Phase-level voice-fill controller. One instance drives every prompt card in
+  // the current phase (only one records at a time); cards are co-located with
+  // their fields below via VoicePromptCard. area_key is passed per onStart call
+  // (the phase id), so a single hook serves whichever phase is on screen.
+  const voiceFill = useSectionVoiceFill({
+    inspectionId,
+    targetId: target.id,
+    scope,
+    ctx,
+    getAnswers: () => answers,
+    onRowsWritten: mergeAiRows,
+  });
+
+  // After a voice fill, scroll the first filled field into view once it (and any
+  // gate-revealed dependents) have rendered.
+  useEffect(() => {
+    if (!scrollTargetKey) return;
+    const id = requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-answer-key="${CSS.escape(scrollTargetKey)}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setScrollTargetKey(null);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [scrollTargetKey, answers]);
 
   const isJustFilled = (areaKey: string, slug: string, stepIndex: number | null) => {
     const key =
@@ -451,6 +497,31 @@ export function UnitSurvey({
   const phase = phases[currentIdx];
   const isFirst = currentIdx === 0;
   const isLast = currentIdx === phases.length - 1;
+
+  // Co-locate each voice prompt with its fields: anchor it to the FIRST of its
+  // target slugs present in this phase, so the prompt's mic renders inline
+  // directly above the questions it fills (not bundled at the top of the
+  // section). The phase content is ordered so a prompt's targets are contiguous.
+  const phasePrompts = promptsForPhase(phase.id);
+  const promptByAnchorSlug = new Map<string, (typeof phasePrompts)[number]>();
+  {
+    const phaseSlugs = new Set(phase.questions.map((q) => q.slug));
+    for (const p of phasePrompts) {
+      const anchor = p.target_slugs.find((s) => phaseSlugs.has(s));
+      if (anchor && !promptByAnchorSlug.has(anchor)) promptByAnchorSlug.set(anchor, p);
+    }
+  }
+  const voiceCardFor = (slugs: string[]) => {
+    for (const s of slugs) {
+      const p = promptByAnchorSlug.get(s);
+      if (p) {
+        return (
+          <VoicePromptCard key={`vp-${p.id}`} prompt={p} phaseId={phase.id} fill={voiceFill} />
+        );
+      }
+    }
+    return null;
+  };
 
   return (
     <main className="mx-auto max-w-md p-6 pb-24">
@@ -554,16 +625,7 @@ export function UnitSurvey({
             {scopeLabel(scope)}
           </span>
         </div>
-        <SectionVoicePrompts
-          phaseId={phase.id}
-          inspectionId={inspectionId}
-          targetId={target.id}
-          scope={scope}
-          ctx={ctx}
-          getAnswers={() => answers}
-          onRowsWritten={mergeAiRows}
-        />
-        <div className="mt-2 flex flex-col gap-3">
+        <div className="mt-3 flex flex-col gap-3">
           {buildRenderPlan(phase.questions).map((node) => {
             if (node.kind === 'group') {
               // Conditional branching: if every question in the block is hidden
@@ -580,7 +642,9 @@ export function UnitSurvey({
               );
               const groupMeta = repeaterGroupMeta(node.groupId);
               return (
-                <div key={`group-${node.groupId}`} className="flex flex-col gap-3">
+                <Fragment key={`group-${node.groupId}`}>
+                  {voiceCardFor(node.questions.map((gq) => gq.slug))}
+                  <div className="flex flex-col gap-3">
                   <StepGroup
                     groupId={node.groupId}
                     groupLabel={groupMeta.title}
@@ -609,7 +673,8 @@ export function UnitSurvey({
                       setNotes,
                     }),
                   )}
-                </div>
+                  </div>
+                </Fragment>
               );
             }
 
@@ -624,7 +689,9 @@ export function UnitSurvey({
 
             if (q.type === 'repeater') {
               return (
-                <div key={key} className="flex flex-col gap-3">
+                <Fragment key={key}>
+                  {voiceCardFor([q.slug])}
+                  <div data-answer-key={key} className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <RepeaterStub
                       question={q}
@@ -650,13 +717,16 @@ export function UnitSurvey({
                       setNotes,
                     }),
                   )}
-                </div>
+                  </div>
+                </Fragment>
               );
             }
 
             if (q.type === 'file') {
               return (
-                <div key={key} className="flex flex-col gap-3">
+                <Fragment key={key}>
+                  {voiceCardFor([q.slug])}
+                  <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <MediaButtons
                       inspectionId={inspectionId}
@@ -687,12 +757,15 @@ export function UnitSurvey({
                       setNotes,
                     }),
                   )}
-                </div>
+                  </div>
+                </Fragment>
               );
             }
 
             return (
-              <div key={key} className="flex flex-col gap-3">
+              <Fragment key={key}>
+                {voiceCardFor([q.slug])}
+                <div data-answer-key={key} className="flex flex-col gap-3">
                 <QuestionRow
                   question={q}
                   inspectionId={inspectionId}
@@ -714,7 +787,8 @@ export function UnitSurvey({
                     setNotes,
                   }),
                 )}
-              </div>
+                </div>
+              </Fragment>
             );
           })}
         </div>
