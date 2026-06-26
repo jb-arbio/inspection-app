@@ -11,6 +11,7 @@ import { ConditionalFollowUp } from '@/components/firstVisit/ConditionalFollowUp
 import { PerOptionFollowUp } from '@/components/firstVisit/PerOptionFollowUp';
 import { followUpKey, perOptionFollowUpKey } from '@/lib/firstVisit/multiSelect';
 import { isSkipped, type SkippedValue } from '@/components/firstVisit/ProgressRing';
+import { snapshotConfidence } from '@/lib/firstVisit/aiFill';
 
 // Soft-delete sentinel value used when the inspector removes a block. We
 // don't have a hard-delete API and a missing step_index would cause sibling
@@ -44,7 +45,8 @@ export type StepGroupProps = {
   inspectionId: string;
   targetId: string;
   areaKey: string;
-  hubValueLookup: (slug: string) => unknown | undefined;
+  hubValueLookup: (slug: string, stepIndex: number | null) => unknown | undefined;
+  justFilledLookup?: (slug: string, stepIndex: number | null) => boolean;
   answers: Record<string, LocalAnswer>;
   onChange: (
     q: FirstVisitQuestion,
@@ -69,6 +71,7 @@ export function StepGroup({
   targetId,
   areaKey,
   hubValueLookup,
+  justFilledLookup,
   answers,
   onChange,
   setNotes,
@@ -165,7 +168,8 @@ export function StepGroup({
                 targetId={targetId}
                 areaKey={areaKey}
                 stepIndex={idx}
-                hubValue={hubValueLookup(q.slug)}
+                hubValue={hubValueLookup(q.slug, idx)}
+                justFilled={justFilledLookup?.(q.slug, idx) ?? false}
                 answers={answers}
                 onChange={onChange}
                 setNotes={setNotes}
@@ -228,6 +232,7 @@ export function QuestionRow({
   areaKey,
   stepIndex,
   hubValue,
+  justFilled,
   answers,
   onChange,
   setNotes,
@@ -238,6 +243,7 @@ export function QuestionRow({
   areaKey: string;
   stepIndex: number | null;
   hubValue: unknown | undefined;
+  justFilled?: boolean;
   answers: Record<string, LocalAnswer>;
   onChange: (
     q: FirstVisitQuestion,
@@ -319,6 +325,8 @@ export function QuestionRow({
           question={question}
           hubValue={hubValue}
           value={value ?? ''}
+          suggestionConfidence={snapshotConfidence(answer?.hub_suggestion_snapshot)}
+          justFilled={justFilled}
           onChange={(c) => onChange(question, c, stepIndex)}
         />
       )}

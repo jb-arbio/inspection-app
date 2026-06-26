@@ -53,14 +53,14 @@ function makeClient(opts: {
 const makeParams = (inspectionId: string) => Promise.resolve({ inspectionId });
 
 describe('parseFindingMediaStep', () => {
-  it('extracts step index from finding_media::N', () => {
-    expect(parseFindingMediaStep('finding_media::3')).toBe(3);
-    expect(parseFindingMediaStep('finding_media::0')).toBe(0);
+  it('extracts step index from issue_media::N', () => {
+    expect(parseFindingMediaStep('issue_media::3')).toBe(3);
+    expect(parseFindingMediaStep('issue_media::0')).toBe(0);
   });
   it('returns null for non-matching keys', () => {
-    expect(parseFindingMediaStep('finding_media')).toBeNull();
-    expect(parseFindingMediaStep('finding_item_name')).toBeNull();
-    expect(parseFindingMediaStep('finding_media::x')).toBeNull();
+    expect(parseFindingMediaStep('issue_media')).toBeNull();
+    expect(parseFindingMediaStep('issue_name')).toBeNull();
+    expect(parseFindingMediaStep('issue_media::x')).toBeNull();
   });
 });
 
@@ -93,8 +93,8 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
     asMock(getHubSupabase).mockReturnValue(
       makeClient({
         answers: [
-          { target_id: 't1', scope: 'location', question_key: 'finding_item_name', step_index: 0, value: 'Leak' },
-          { target_id: 't1', scope: 'location', question_key: 'finding_resolution', step_index: 0, value: 'Repair' },
+          { target_id: 't1', scope: 'location', question_key: 'issue_name', step_index: 0, value: 'Leak' },
+          { target_id: 't1', scope: 'location', question_key: 'issue_resolution', step_index: 0, value: 'Repair' },
         ],
         targets: [{ id: 't1', label: 'Apt 2', kind: 'unit' }],
         media: [],
@@ -115,12 +115,12 @@ describe('GET /api/first-visit/[inspectionId]/findings.csv', () => {
     asMock(getHubSupabase).mockReturnValue(
       makeClient({
         answers: [
-          { target_id: 't1', scope: 'unit_category', question_key: 'finding_item_name', step_index: 2, value: 'Chair' },
-          { target_id: 't1', scope: 'unit_category', question_key: 'finding_resolution', step_index: 2, value: 'Replace' },
+          { target_id: 't1', scope: 'unit_category', question_key: 'issue_name', step_index: 2, value: 'Chair' },
+          { target_id: 't1', scope: 'unit_category', question_key: 'issue_resolution', step_index: 2, value: 'Replace' },
         ],
         targets: [{ id: 't1', label: 'Apt 2', kind: 'unit' }],
         media: [
-          { target_id: 't1', question_key: 'finding_media::2', storage_path: 'i1/abc.jpg', kind: 'photo' },
+          { target_id: 't1', question_key: 'issue_media::2', storage_path: 'i1/abc.jpg', kind: 'photo' },
         ],
         createSignedUrl,
       }),

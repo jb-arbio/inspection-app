@@ -8,6 +8,7 @@ import { createHandlers } from '@/lib/firstVisit/handlers';
 import { type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
+import { EditSurveyButton } from '@/components/firstVisit/EditSurveyButton';
 import { ProgressRing } from '@/components/firstVisit/ProgressRing';
 import { track } from '@/lib/firstVisit/analytics';
 import { UnitSurvey, type SurveyTarget } from './UnitSurvey';
@@ -20,12 +21,12 @@ import {
   type ScopeProgress,
 } from '@/lib/firstVisit/progress';
 import { validateUnitIdentifier } from '@/lib/firstVisit/unitIdentifier';
+import { useSurveyConfig } from '@/lib/firstVisit/SurveyConfigContext';
 
-// The deal-scoped questions render as two navigator cards: metadata up top,
-// evaluation at the bottom — you can't judge a deal before walking it.
-// Module-level constants keep the phaseIds prop identity stable across renders.
+// Deal-scoped questions render as a single "Visit details" card up top (the V1
+// redesign keeps only Visit metadata at deal level; readiness moved to per-unit
+// phase 15). Module-level constant keeps the phaseIds prop identity stable.
 const DEAL_DETAILS_PHASES = ['1'];
-const DEAL_EVALUATION_PHASES = ['11'];
 
 // Raw hub rows carry extra display fields beyond the lean HubSnapshot type.
 type HubLocation = { id: string; display_name?: string };
@@ -120,6 +121,7 @@ export default function VisitNavigator({
   );
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
+  const { phases: configPhases } = useSurveyConfig();
 
   const reloadTargets = useCallback(async () => {
     const rows = await localDb.targets
@@ -159,7 +161,7 @@ export default function VisitNavigator({
 
   const progressFor = (targetId: string, scope: HubScope, phaseIds?: string[]): ScopeProgress => {
     const own = answers.filter((a) => a.target_id === targetId);
-    return computeProgressFromAnswers(scope, own, phaseIds);
+    return computeProgressFromAnswers(scope, own, phaseIds, configPhases);
   };
 
   // Aggregate completion across every scope in this visit: deal-scoped
@@ -190,6 +192,7 @@ export default function VisitNavigator({
         label: 'Visit details',
         scope: 'deal',
         answers: answers.filter((a) => a.target_id === inspectionId),
+        phases: configPhases,
       },
     ];
     for (const p of properties) {
@@ -197,12 +200,14 @@ export default function VisitNavigator({
         label: p.label || 'Property',
         scope: 'location',
         answers: answers.filter((a) => a.target_id === p.id),
+        phases: configPhases,
       });
       for (const u of unitsOf(p.id)) {
         inputs.push({
           label: `${p.label || 'Property'} › ${u.label || 'Unit'}`,
           scope: 'unit_category',
           answers: answers.filter((a) => a.target_id === u.id),
+          phases: configPhases,
         });
       }
     }
@@ -509,6 +514,7 @@ export default function VisitNavigator({
             })()}
           </div>
           <div className="flex shrink-0 items-center gap-2 text-xs">
+            <EditSurveyButton />
             <SyncBadge pending={pending} syncing={syncing} />
             <button
               onClick={syncNow}
@@ -642,23 +648,9 @@ export default function VisitNavigator({
         />
       </section>
 
-      {/* Deal evaluation — deliberately last: the verdict comes after the walkthrough. */}
-      <button
-        onClick={() =>
-          setSelected({ kind: 'deal', label: 'Deal evaluation', phaseIds: DEAL_EVALUATION_PHASES })
-        }
-        className="mt-5 flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 text-left hover:bg-gray-50"
-      >
-        <div className="flex-1">
-          <div className="text-sm font-medium">Deal evaluation</div>
-          <div className="text-xs text-gray-500">Fill in at the end of the visit</div>
-        </div>
-        {(() => {
-          const pr = progressFor(inspectionId, 'deal', DEAL_EVALUATION_PHASES);
-          return pr.total > 0 ? <ProgressRing done={pr.done} total={pr.total} size={32} /> : null;
-        })()}
-        <span aria-hidden className="text-gray-400">›</span>
-      </button>
+      {/* V1 redesign: final assessment / readiness is now per-UNIT (phase 15,
+          unit scope) and renders inside each unit's survey — there is no longer
+          a deal-level evaluation card. */}
 
       <button
         onClick={() => setSubmitState('confirming')}

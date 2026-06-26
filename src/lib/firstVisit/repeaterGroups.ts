@@ -14,55 +14,23 @@ export type RepeaterGroupMeta = {
   itemNoun: string;
 };
 
+// Keyed by the V1-redesign repeater group_ids (see questionStructure.ts overlay):
+// checkin_step, issue, item. Unknown groups fall back to a bare "Step N".
 const GROUPS: Record<string, RepeaterGroupMeta> = {
-  finding: {
-    title: 'Findings',
-    intro: 'List items that need repair, replacement, or purchase. Add one per issue.',
-    itemNoun: 'Finding',
-  },
   checkin_step: {
     title: 'Check-in steps',
     intro: 'Document each access point in sequence, from building entrance to unit door.',
     itemNoun: 'Step',
   },
-  consumable: {
-    title: 'Consumables',
-    itemNoun: 'Item',
+  issue: {
+    title: 'Issue log',
+    intro: 'List each issue found — one per problem (broken, damaged, dirty, or missing).',
+    itemNoun: 'Issue',
   },
-  appliance_amenity: {
+  item: {
     title: 'Appliances & amenities',
-    intro: 'Catalogue each appliance or amenity in the unit — its brand, location, how to use it, and whether it is working.',
-    itemNoun: 'Appliance',
-  },
-  utility_provider: {
-    title: 'Utilities & providers',
-    intro: 'Record each utility — provider name, account number, and emergency contact.',
-    itemNoun: 'Utility',
-  },
-  maintenance_procedure: {
-    title: 'Maintenance procedures',
-    intro: 'Document recurring maintenance procedures and the steps observed for each.',
-    itemNoun: 'Procedure',
-  },
-  equipment_issue: {
-    title: 'Equipment issues',
-    intro: 'List equipment problems found — add one per issue with a photo, type, description, and estimated cost.',
-    itemNoun: 'Issue',
-  },
-  furniture_issue: {
-    title: 'Furniture issues',
-    intro: 'List furniture problems found — add one per issue with a photo, type, description, and estimated cost.',
-    itemNoun: 'Issue',
-  },
-  maintenance_issue: {
-    title: 'Maintenance issues',
-    intro: 'List maintenance problems found — add one per issue with a photo, type, description, and estimated cost.',
-    itemNoun: 'Issue',
-  },
-  checkout_step: {
-    title: 'Check-out steps',
-    intro: 'Document each check-out step in sequence, from securing the unit to leaving the building.',
-    itemNoun: 'Step',
+    intro: 'Catalogue each appliance or amenity — its kind, brand, location, and how to use it.',
+    itemNoun: 'Item',
   },
 };
 

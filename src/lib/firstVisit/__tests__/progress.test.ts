@@ -1,32 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { computeProgressFromAnswers, requiredVisible } from '../progress';
-import { questionsForScope, isScopeLevelRequired, isVisible } from '../questions';
-import type { FirstVisitQuestion } from '../questions';
+import { computeProgressFromAnswers } from '../progress';
+import { questionsForScope, isScopeLevelRequired } from '../questions';
+import type { FirstVisitPhase, FirstVisitQuestion } from '../questions';
 import type { LocalAnswer } from '../db';
 import type { HubScope } from '../resolveScope';
-
-// Sane FirstVisitQuestion defaults; spread a partial to override only the
-// fields a given test cares about.
-function mkQ(overrides: Partial<FirstVisitQuestion> = {}): FirstVisitQuestion {
-  return {
-    slug: 'fv_q',
-    label: 'Q',
-    description: null,
-    scope: 'location',
-    mode: 'data',
-    type: 'text',
-    options: [],
-    required: false,
-    repeater: false,
-    pms_target: null,
-    status: 'existing',
-    verdict: null,
-    notes: null,
-    phase_id: '1',
-    phase_label: 'Phase 1',
-    ...overrides,
-  };
-}
 
 function makeAnswer(
   question_key: string,
@@ -50,16 +27,10 @@ function makeAnswer(
 }
 
 function requiredSlugs(scope: HubScope): string[] {
-  // Scope-level required = required AND not a repeater member AND currently
-  // visible (mirrors the production denominator in computeProgressFromAnswers,
-  // which runs questions through requiredVisible). With no answers supplied,
-  // questions gated by an `equals`-style visible_when rule (e.g. luggage-storage
-  // details, gated on the boolean fv_storage_onsite_check) are hidden and so do
-  // not count — same as the real ring. We pass an empty answer map to match the
-  // empty-answers callers below.
-  const noAnswers = new Map<string, unknown>();
+  // Scope-level required = required AND not a repeater member (mirrors the
+  // production denominator in computeProgressFromAnswers).
   return questionsForScope(scope)
-    .filter((q) => isScopeLevelRequired(q) && isVisible(q.visible_when, noAnswers))
+    .filter(isScopeLevelRequired)
     .map((q) => q.slug);
 }
 
@@ -173,51 +144,151 @@ describe('computeProgressFromAnswers', () => {
       ).toBe(false);
     }
 
-    // And the total denominator must exclude every repeater member. With empty
-    // answers it must also exclude questions hidden by an unsatisfied
-    // visible_when (e.g. the furnishing-gated measurements gate on
-    // fv_furnishing_by_arbio:equals true, which is unsatisfied when unanswered).
+    // And the total denominator must exclude every repeater member.
     const { total } = computeProgressFromAnswers('unit_category', []);
-    const nonRepeaterRequiredVisible = uc.filter(
-      (q) => q.required && !q.group_id && isVisible(q.visible_when, new Map()),
-    ).length;
-    expect(total).toBe(nonRepeaterRequiredVisible);
-  });
-
-  it('hidden (visible_when unsatisfied) required questions drop out of total', () => {
-    const qs = [
-      mkQ({ slug: 'fv_parking_available', type: 'select', required: true }),
-      mkQ({ slug: 'fv_parking_spots', type: 'number', required: true,
-            visible_when: { question: 'fv_parking_available', equals: 'Yes' } }),
-    ];
-    expect(requiredVisible(qs, new Map([['fv_parking_available', 'No']])).map((q) => q.slug))
-      .toEqual(['fv_parking_available']);
-    expect(requiredVisible(qs, new Map([['fv_parking_available', 'Yes']])).length).toBe(2);
+    const nonRepeaterRequired = uc.filter((q) => q.required && !q.group_id).length;
+    expect(total).toBe(nonRepeaterRequired);
   });
 });
 
 describe('computeProgressFromAnswers phase filter', () => {
-  it('filtered deal progress for phases 1 and 11 sums to the unfiltered total', () => {
-    const whole = computeProgressFromAnswers('deal', []);
-    const meta = computeProgressFromAnswers('deal', [], ['1']);
-    const evaluation = computeProgressFromAnswers('deal', [], ['11']);
-    expect(meta.total + evaluation.total).toBe(whole.total);
-    expect(meta.total).toBeGreaterThan(0);
-    expect(evaluation.total).toBeGreaterThan(0);
+  it('filtered unit_category progress for two phase subsets sums to the unfiltered total', () => {
+    // unit_category spans phases 8..15. Splitting them into two disjoint subsets
+    // and filtering each must add back up to the unfiltered scope total.
+    const whole = computeProgressFromAnswers('unit_category', []);
+    const firstHalf = computeProgressFromAnswers('unit_category', [], ['8', '9', '10', '11']);
+    const secondHalf = computeProgressFromAnswers('unit_category', [], ['12', '13', '14', '15']);
+    expect(firstHalf.total + secondHalf.total).toBe(whole.total);
+    expect(firstHalf.total).toBeGreaterThan(0);
+    expect(secondHalf.total).toBeGreaterThan(0);
+  });
+
+  it('counts against an injected phases set, not the global config', () => {
+    // A tiny custom survey: one phase, one location-scoped required single
+    // question. The slug does not exist in the bundled config, so if the global
+    // PHASES were used the total/done would not reflect this set.
+    const customQ: FirstVisitQuestion = {
+      slug: 'custom_only_field',
+      label: 'Custom only field',
+      description: null,
+      scope: 'location',
+      mode: 'observe',
+      type: 'text',
+      options: [],
+      required: true,
+      repeater: false,
+      pms_target: null,
+      status: 'existing',
+      verdict: null,
+      notes: null,
+      phase_id: 'custom_phase',
+      phase_label: 'Custom phase',
+    };
+    const customPhases: FirstVisitPhase[] = [
+      { id: 'custom_phase', label: 'Custom phase', questions: [customQ] },
+    ];
+
+    // Total reflects exactly the one required question in the injected set.
+    const empty = computeProgressFromAnswers('location', [], undefined, customPhases);
+    expect(empty.total).toBe(1);
+    expect(empty.done).toBe(0);
+
+    // Answering it counts toward the injected denominator.
+    const filled = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('custom_only_field', 'hello')],
+      undefined,
+      customPhases,
+    );
+    expect(filled.done).toBe(1);
+
+    // A real global location slug is NOT part of the injected set, so it never
+    // counts — proving we measured against the custom phases, not PHASES.
+    const globalSlug = requiredSlugs('location')[0];
+    const withGlobalAnswer = computeProgressFromAnswers(
+      'location',
+      [makeAnswer(globalSlug, 'x')],
+      undefined,
+      customPhases,
+    );
+    expect(withGlobalAnswer.total).toBe(1);
+    expect(withGlobalAnswer.done).toBe(0);
   });
 
   it('an answer only counts toward the card that contains its question', () => {
-    const meta = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['1'],
+    // fv_readiness_health_score lives in the unit_category "Final assessment"
+    // phase '15'. It must not count toward an unrelated phase card ('8'), only
+    // toward the card whose filter includes its phase ('15').
+    const identity = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['8'],
     );
-    const evaluation = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['11'],
+    const finalAssessment = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['15'],
     );
-    expect(meta.done).toBe(0);
-    expect(evaluation.done).toBe(1);
+    expect(identity.done).toBe(0);
+    expect(finalAssessment.done).toBe(1);
+  });
+
+  it('excludes required questions hidden by a visible_when gate from the denominator', () => {
+    const base = {
+      label: '',
+      description: null,
+      scope: 'location' as HubScope,
+      mode: 'data' as const,
+      type: 'text' as const,
+      options: [],
+      repeater: false,
+      pms_target: null,
+      status: 'existing' as const,
+      verdict: null,
+      notes: null,
+      phase_id: 'p',
+      phase_label: 'P',
+    };
+    const gate: FirstVisitQuestion = { ...base, slug: 'gate', type: 'boolean', required: false };
+    const dependent: FirstVisitQuestion = {
+      ...base,
+      slug: 'dep',
+      required: true,
+      visible_when: { question: 'gate', equals: true },
+    };
+    const phases: FirstVisitPhase[] = [
+      { id: 'p', label: 'P', questions: [gate, dependent] },
+    ];
+
+    // Gate unanswered → dependent hidden → not counted (total 0).
+    expect(computeProgressFromAnswers('location', [], undefined, phases).total).toBe(0);
+
+    // Gate = false → still hidden → not counted.
+    const off = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', false)],
+      undefined,
+      phases,
+    );
+    expect(off.total).toBe(0);
+
+    // Gate = true → dependent visible → counted, and answering it completes it.
+    const onEmpty = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true)],
+      undefined,
+      phases,
+    );
+    expect(onEmpty.total).toBe(1);
+    expect(onEmpty.done).toBe(0);
+
+    const onFilled = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true), makeAnswer('dep', 'answered')],
+      undefined,
+      phases,
+    );
+    expect(onFilled.total).toBe(1);
+    expect(onFilled.done).toBe(1);
   });
 });

@@ -8,6 +8,13 @@ export type VoiceDictationButtonProps = {
   elapsedMs: number;
   onStart: () => void;
   onStop: () => void;
+  // Optional: disable the idle mic even when online (e.g. another mic in this
+  // section is already recording). Additive — defaults to enabled.
+  disabled?: boolean;
+  // Optional: label shown during the transcribing/processing state. The
+  // section-voice flow shows "Thinking…" (transcribe + extract); defaults to
+  // "Transcribing…" for per-field dictation.
+  transcribingLabel?: string;
 };
 
 function fmt(ms: number): string {
@@ -23,6 +30,8 @@ export function VoiceDictationButton({
   elapsedMs,
   onStart,
   onStop,
+  disabled = false,
+  transcribingLabel = 'Transcribing…',
 }: VoiceDictationButtonProps) {
   if (status === 'transcribing') {
     return (
@@ -32,7 +41,7 @@ export function VoiceDictationButton({
         className="inline-flex items-center gap-1 text-xs text-gray-500"
       >
         <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-gray-600" />
-        Transcribing…
+        {transcribingLabel}
       </span>
     );
   }
@@ -88,7 +97,7 @@ export function VoiceDictationButton({
       <button
         type="button"
         aria-label="Record voice note"
-        disabled={!online}
+        disabled={!online || disabled}
         onClick={onStart}
         className="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
       >

@@ -94,18 +94,21 @@ describe('remainingRequiredForTarget', () => {
   });
 
   it('respects a phaseIds filter', () => {
+    // unit_category spans phases 8..15; a single-phase subset must be a strict
+    // subset of the whole-scope required list. (Deal scope has only phase 1, so
+    // it can't demonstrate the filter.)
     const all = remainingRequiredForTarget({
-      label: 'Visit',
-      scope: 'deal',
+      label: 'Unit',
+      scope: 'unit_category',
       answers: [],
     });
-    const phase1 = remainingRequiredForTarget({
-      label: 'Visit',
-      scope: 'deal',
+    const subset = remainingRequiredForTarget({
+      label: 'Unit',
+      scope: 'unit_category',
       answers: [],
-      phaseIds: ['1'],
+      phaseIds: ['8'],
     });
-    expect(phase1.length).toBeGreaterThan(0);
-    expect(phase1.length).toBeLessThan(all.length);
+    expect(subset.length).toBeGreaterThan(0);
+    expect(subset.length).toBeLessThan(all.length);
   });
 });

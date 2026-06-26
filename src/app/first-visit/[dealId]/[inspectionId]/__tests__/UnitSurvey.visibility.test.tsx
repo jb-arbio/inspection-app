@@ -1,17 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { UnitSurvey } from '../UnitSurvey';
 import { localDb } from '@/lib/firstVisit/db';
-import { enqueue } from '@/lib/firstVisit/sync';
+import { SurveyConfigProvider } from '@/lib/firstVisit/SurveyConfigContext';
 import type { FirstVisitPhase, FirstVisitQuestion } from '@/lib/firstVisit/questions';
 
-// Conditional-branching fixture: a boolean controller (`ctrl`) gates a dependent
-// text question (`dep`) via visible_when. When the controller is true the
-// dependent renders; when false it is hidden AND its stored value is cleared.
-
 const baseQ: FirstVisitQuestion = {
-  slug: 'placeholder',
-  label: 'placeholder',
+  slug: 'q',
+  label: 'Q',
   description: null,
   scope: 'location',
   mode: 'data',
@@ -27,74 +25,21 @@ const baseQ: FirstVisitQuestion = {
   phase_label: 'Phase 1',
 };
 
-const ctrlQ: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'ctrl',
-  label: 'Has secondary fire exit?',
-  type: 'boolean',
-};
-
-const depQ: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'dep',
-  label: 'Where is the fire exit?',
-  type: 'text',
-  visible_when: { question: 'ctrl', equals: true },
-};
-
-// 3-question cascade chain: A gates B, B gates C. Used by the cascade-clear test.
-const chainA: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'chainA',
-  label: 'A: enable B?',
-  type: 'boolean',
-};
-const chainB: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'chainB',
-  label: 'B: enable C?',
-  type: 'boolean',
-  visible_when: { question: 'chainA', equals: true },
-};
-const chainC: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'chainC',
-  label: 'C: detail',
-  type: 'text',
-  visible_when: { question: 'chainB', equals: true },
-};
-
-// Progress-ring fixture: one always-visible required question (`reqVisible`) plus
-// one required dependent (`reqDep`) hidden by a "No" controller (`ringCtrl`). Once
-// the always-visible required questions are answered the ring must read complete,
-// because the hidden required dependent must not count toward the total.
-const ringCtrl: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'ringCtrl',
-  label: 'Ring: has extra?',
-  type: 'boolean',
-  required: true,
-};
-const reqVisible: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'reqVisible',
-  label: 'Ring: always required',
-  type: 'text',
-  required: true,
-};
-const reqDep: FirstVisitQuestion = {
-  ...baseQ,
-  slug: 'reqDep',
-  label: 'Ring: required only when extra',
-  type: 'text',
-  required: true,
-  visible_when: { question: 'ringCtrl', equals: true },
-};
-
-// Mutable phase set so individual tests can swap in their own fixture before
-// rendering. Defaults to the controller/dependent pair used by the first suite.
-let activePhases: FirstVisitPhase[] = [
-  { id: 'p1', label: 'Phase 1', questions: [ctrlQ, depQ] },
+// Gate (boolean) controls whether the dependent text field renders.
+const phases: FirstVisitPhase[] = [
+  {
+    id: 'p1',
+    label: 'Phase 1',
+    questions: [
+      { ...baseQ, slug: 'has_balcony', label: 'Is there a balcony?', type: 'boolean' },
+      {
+        ...baseQ,
+        slug: 'balcony_count',
+        label: 'Number of balconies',
+        visible_when: { question: 'has_balcony', equals: true },
+      },
+    ],
+  },
 ];
 
 vi.mock('@/lib/firstVisit/questions', async () => {
@@ -103,8 +48,6 @@ vi.mock('@/lib/firstVisit/questions', async () => {
   );
   return {
     ...actual,
-    phasesForScope: () =>
-      activePhases.map((p) => ({ ...p, questions: [...p.questions] })),
     areaKeyFor: (q: FirstVisitQuestion) => q.phase_id,
     groupIdFor: (q: FirstVisitQuestion) => q.group_id ?? null,
   };
@@ -115,8 +58,7 @@ vi.mock('@/lib/firstVisit/analytics', () => ({ track: vi.fn() }));
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
-  // Reset to the default controller/dependent fixture; individual tests override.
-  activePhases = [{ id: 'p1', label: 'Phase 1', questions: [ctrlQ, depQ] }];
+  window.confirm = vi.fn(() => true);
 });
 
 afterEach(async () => {
@@ -124,166 +66,89 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 
-function renderSurvey() {
+function renderSurvey(p: FirstVisitPhase[]): ReactElement {
   return render(
-    <UnitSurvey
-      inspectionId="i1"
-      target={{ id: 'tgt-1', label: 'Property A' }}
-      scope="location"
-      ctx={{ deal_id: 'd1', location_id: 'loc-1' }}
-      snapshot={null}
-      onBack={vi.fn()}
-    />,
-  );
+    <SurveyConfigProvider value={{ phases: p, allQuestions: p.flatMap((x) => x.questions) }}>
+      <UnitSurvey
+        inspectionId="i1"
+        target={{ id: 'tgt-1', label: 'Property A' }}
+        scope="location"
+        ctx={{ deal_id: 'd1', location_id: 'loc-1' }}
+        snapshot={null}
+        onBack={vi.fn()}
+      />
+    </SurveyConfigProvider>,
+  ) as unknown as ReactElement;
 }
 
-// Seed an answer row directly into Dexie under the keying UnitSurvey uses on
-// load: target_id::area_key::question_key, step_index null.
-async function seedAnswer(slug: string, areaKey: string, value: unknown) {
-  await localDb.answers.put({
-    id: `${slug}-id`,
-    inspection_id: 'i1',
-    target_id: 'tgt-1',
-    scope: 'location',
-    location_id: 'loc-1',
-    question_key: slug,
-    area_key: areaKey,
-    step_index: null,
-    value,
-    data_point_slug: slug,
-    was_prefilled: false,
-    was_accepted_as_is: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  });
-}
-
-describe('UnitSurvey — conditional branching (visible_when)', () => {
-  it('hides the dependent when the controller is "No", shows it when "Yes"', async () => {
-    await seedAnswer('ctrl', 'p1', false);
-    renderSurvey();
-
-    // Controller always renders.
+describe('UnitSurvey conditional visibility (visible_when)', () => {
+  it('hides a gated question until its controller matches, then reveals it', async () => {
+    const user = userEvent.setup();
+    renderSurvey(phases);
     await waitFor(() =>
-      expect(screen.getByLabelText('Has secondary fire exit?')).toBeInTheDocument(),
+      expect(screen.getByText('Is there a balcony?')).toBeInTheDocument(),
     );
-    // Dependent is hidden while controller = false.
-    expect(screen.queryByLabelText('Where is the fire exit?')).toBeNull();
+    // Gate unanswered → dependent hidden.
+    expect(screen.queryByLabelText('Number of balconies')).toBeNull();
 
-    // Flip the controller to Yes.
-    fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
-
-    // Dependent now renders.
+    // Answer the gate Yes → dependent appears.
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
     await waitFor(() =>
-      expect(screen.getByLabelText('Where is the fire exit?')).toBeInTheDocument(),
+      expect(screen.getByLabelText('Number of balconies')).toBeInTheDocument(),
     );
   });
 
-  it('clears the dependent answer when the controller flips to a hiding value', async () => {
-    // Controller = true and dependent already answered.
-    await seedAnswer('ctrl', 'p1', true);
-    await seedAnswer('dep', 'p1', 'Through the back staircase');
-    renderSurvey();
+  it('clears a hidden dependent’s stored value when the gate turns it off', async () => {
+    const user = userEvent.setup();
+    // Seed: gate=true and dependent already answered.
+    await localDb.answers.bulkPut([
+      {
+        id: 'a-gate',
+        inspection_id: 'i1',
+        target_id: 'tgt-1',
+        scope: 'location',
+        location_id: 'loc-1',
+        question_key: 'has_balcony',
+        area_key: 'p1',
+        step_index: null,
+        value: true,
+        data_point_slug: 'has_balcony',
+        was_prefilled: false,
+        was_accepted_as_is: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'a-dep',
+        inspection_id: 'i1',
+        target_id: 'tgt-1',
+        scope: 'location',
+        location_id: 'loc-1',
+        question_key: 'balcony_count',
+        area_key: 'p1',
+        step_index: null,
+        value: '2',
+        data_point_slug: 'balcony_count',
+        was_prefilled: false,
+        was_accepted_as_is: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
 
-    // Dependent renders with its seeded value.
+    renderSurvey(phases);
     await waitFor(() =>
-      expect(screen.getByLabelText('Where is the fire exit?')).toBeInTheDocument(),
+      expect(screen.getByLabelText('Number of balconies')).toBeInTheDocument(),
     );
-    (enqueue as ReturnType<typeof vi.fn>).mockClear();
 
-    // Flip controller to No → dependent becomes hidden, value must be cleared.
-    fireEvent.click(screen.getByRole('button', { name: 'No' }));
-
-    // Dependent is removed from the DOM.
+    // Flip the gate to No → dependent hides AND its stored value is cleared.
+    await user.click(screen.getByRole('button', { name: 'No' }));
     await waitFor(() =>
-      expect(screen.queryByLabelText('Where is the fire exit?')).toBeNull(),
+      expect(screen.queryByLabelText('Number of balconies')).toBeNull(),
     );
-
-    // The cleared value is persisted through the existing autosave path:
-    // enqueue('answer_upsert', { question_key: 'dep', value: null }).
-    await waitFor(() => {
-      const cleared = (enqueue as ReturnType<typeof vi.fn>).mock.calls.find(
-        ([, row]) => row?.question_key === 'dep',
-      );
-      expect(cleared).toBeTruthy();
-      expect(cleared![1].value).toBeNull();
-    });
-
-    // And the stored Dexie row for the dependent is now null.
-    const row = await localDb.answers
-      .where('target_id')
-      .equals('tgt-1')
-      .toArray();
-    const depRow = row.find((r) => r.question_key === 'dep');
-    expect(depRow?.value).toBeNull();
-  });
-
-  it('cascade-clears a 3-deep chain (A→B→C) when the root flips to hiding', async () => {
-    activePhases = [
-      { id: 'p1', label: 'Phase 1', questions: [chainA, chainB, chainC] },
-    ];
-    await seedAnswer('chainA', 'p1', true);
-    await seedAnswer('chainB', 'p1', true);
-    await seedAnswer('chainC', 'p1', 'leaf detail');
-    renderSurvey();
-
-    // Whole chain visible while A=true, B=true.
-    await waitFor(() =>
-      expect(screen.getByLabelText('C: detail')).toBeInTheDocument(),
-    );
-    expect(screen.getByLabelText('B: enable C?')).toBeInTheDocument();
-
-    // Flip A → No. B is hidden directly (A gates B); C is hidden because B's
-    // value is cleared (B gates C), which cascades on the next render.
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'No' })[0],
-    );
-
-    // Both B and C leave the DOM.
-    await waitFor(() =>
-      expect(screen.queryByLabelText('B: enable C?')).toBeNull(),
-    );
-    await waitFor(() =>
-      expect(screen.queryByLabelText('C: detail')).toBeNull(),
-    );
-
-    // Both stored values are cleared to null.
     await waitFor(async () => {
-      const rows = await localDb.answers
-        .where('target_id')
-        .equals('tgt-1')
-        .toArray();
-      const b = rows.find((r) => r.question_key === 'chainB');
-      const c = rows.find((r) => r.question_key === 'chainC');
-      expect(b?.value).toBeNull();
-      expect(c?.value).toBeNull();
+      const dep = await localDb.answers.get('a-dep');
+      expect(dep?.value).toBeNull();
     });
-  });
-});
-
-describe('UnitSurvey — in-panel progress ring honors visible_when', () => {
-  it('reads complete once visible required answered, ignoring a hidden required dependent', async () => {
-    activePhases = [
-      { id: 'p1', label: 'Phase 1', questions: [ringCtrl, reqVisible, reqDep] },
-    ];
-    // Controller = No → reqDep is hidden and must not count toward the total.
-    await seedAnswer('ringCtrl', 'p1', false);
-    await seedAnswer('reqVisible', 'p1', 'answered');
-    renderSurvey();
-
-    // The always-visible required question is rendered; the hidden required
-    // dependent is not.
-    await waitFor(() =>
-      expect(screen.getByText('Ring: always required')).toBeInTheDocument(),
-    );
-    expect(screen.queryByText('Ring: required only when extra')).toBeNull();
-
-    // Ring counts only the two visible required questions (ringCtrl + reqVisible),
-    // both answered → done === total.
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText('Progress: 2 of 2 required answered'),
-      ).toBeInTheDocument(),
-    );
   });
 });

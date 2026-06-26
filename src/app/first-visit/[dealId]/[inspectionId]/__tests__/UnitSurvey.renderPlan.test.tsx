@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { UnitSurvey } from '../UnitSurvey';
 import { localDb } from '@/lib/firstVisit/db';
+import { SurveyConfigProvider } from '@/lib/firstVisit/SurveyConfigContext';
 import type { FirstVisitPhase, FirstVisitQuestion } from '@/lib/firstVisit/questions';
 
 const baseQ: FirstVisitQuestion = {
@@ -47,15 +49,14 @@ const phasesGrouped: FirstVisitPhase[] = [
   },
 ];
 
-let activePhases: FirstVisitPhase[] = phasesFlat;
-
+// Phases are injected via the provider per-test; areaKeyFor / groupIdFor are
+// still imported by UnitSurvey, so keep them mocked.
 vi.mock('@/lib/firstVisit/questions', async () => {
   const actual = await vi.importActual<typeof import('@/lib/firstVisit/questions')>(
     '@/lib/firstVisit/questions',
   );
   return {
     ...actual,
-    phasesForScope: () => activePhases,
     areaKeyFor: (q: FirstVisitQuestion) => q.phase_id,
     groupIdFor: (q: FirstVisitQuestion) => q.group_id ?? null,
   };
@@ -74,8 +75,16 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 
-function renderSurvey() {
+function renderWithConfig(ui: ReactElement, phases: FirstVisitPhase[]) {
   render(
+    <SurveyConfigProvider value={{ phases, allQuestions: phases.flatMap((p) => p.questions) }}>
+      {ui}
+    </SurveyConfigProvider>,
+  );
+}
+
+function renderSurvey(phases: FirstVisitPhase[]) {
+  renderWithConfig(
     <UnitSurvey
       inspectionId="i1"
       target={{ id: 'tgt-1', label: 'Property A' }}
@@ -84,13 +93,13 @@ function renderSurvey() {
       snapshot={null}
       onBack={vi.fn()}
     />,
+    phases,
   );
 }
 
 describe('UnitSurvey render plan', () => {
   it('renders flat questions identically when all group_id are null', async () => {
-    activePhases = phasesFlat;
-    renderSurvey();
+    renderSurvey(phasesFlat);
     await waitFor(() =>
       expect(screen.getByLabelText('Plain question 1')).toBeInTheDocument(),
     );
@@ -100,8 +109,7 @@ describe('UnitSurvey render plan', () => {
   });
 
   it('renders grouped questions inside a Step block with "+ Add step"', async () => {
-    activePhases = phasesGrouped;
-    renderSurvey();
+    renderSurvey(phasesGrouped);
     await waitFor(() => expect(screen.getByText('Step 1')).toBeInTheDocument());
     // Group's two questions inside the block.
     expect(screen.getByLabelText('Step description')).toBeInTheDocument();

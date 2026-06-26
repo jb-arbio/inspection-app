@@ -3,8 +3,9 @@ import { phasesForScope } from '../questions';
 
 describe('phasesForScope phase filter', () => {
   it('returns all deal phases when no filter is given (regression)', () => {
+    // Deal scope now has only a single phase: '1' (Visit metadata).
     const all = phasesForScope('deal');
-    expect(all.map((p) => p.id)).toEqual(['1', '11']);
+    expect(all.map((p) => p.id)).toEqual(['1']);
   });
 
   it("['1'] returns only visit metadata", () => {
@@ -15,18 +16,24 @@ describe('phasesForScope phase filter', () => {
     expect(slugs).not.toContain('fv_readiness_health_score');
   });
 
-  it("['11'] returns only the final assessment", () => {
-    const filtered = phasesForScope('deal', ['11']);
-    expect(filtered.map((p) => p.id)).toEqual(['11']);
+  it("['15'] returns only the final assessment (unit_category)", () => {
+    const filtered = phasesForScope('unit_category', ['15']);
+    expect(filtered.map((p) => p.id)).toEqual(['15']);
     const slugs = filtered.flatMap((p) => p.questions.map((q) => q.slug));
     expect(slugs).toContain('fv_readiness_health_score');
-    expect(slugs).not.toContain('fv_visit_date');
+    expect(slugs).not.toContain('fv_unit_floor_number');
   });
 
-  it('the two filtered sets partition the unfiltered set exactly', () => {
-    const all = phasesForScope('deal').flatMap((p) => p.questions.map((q) => q.slug));
-    const a = phasesForScope('deal', ['1']).flatMap((p) => p.questions.map((q) => q.slug));
-    const b = phasesForScope('deal', ['11']).flatMap((p) => p.questions.map((q) => q.slug));
+  it('two filtered unit_category subsets partition the unfiltered set exactly', () => {
+    const all = phasesForScope('unit_category').flatMap((p) =>
+      p.questions.map((q) => q.slug),
+    );
+    const a = phasesForScope('unit_category', ['8', '9', '10', '11']).flatMap((p) =>
+      p.questions.map((q) => q.slug),
+    );
+    const b = phasesForScope('unit_category', ['12', '13', '14', '15']).flatMap((p) =>
+      p.questions.map((q) => q.slug),
+    );
     expect([...a, ...b].sort()).toEqual([...all].sort());
   });
 

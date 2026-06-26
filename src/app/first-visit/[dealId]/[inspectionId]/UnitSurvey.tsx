@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  phasesForScope,
+  filterPhasesForScope,
   areaKeyFor,
   groupIdFor,
   isScopeLevelRequired,
@@ -10,6 +10,7 @@ import {
   isVisible,
   type FirstVisitQuestion,
 } from '@/lib/firstVisit/questions';
+import { useSurveyConfig } from '@/lib/firstVisit/SurveyConfigContext';
 import { RepeaterStub } from '@/components/firstVisit/PrefilledField';
 import { MediaButtons } from '@/components/firstVisit/MediaButtons';
 import { AttachAffordance } from '@/components/firstVisit/AttachAffordance';
@@ -28,6 +29,8 @@ import { lookupHubValue, type HubSnapshot } from '@/lib/firstVisit/snapshot';
 import { repeaterGroupMeta } from '@/lib/firstVisit/repeaterGroups';
 import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
+import { SectionVoicePrompts } from '@/components/firstVisit/SectionVoicePrompts';
+import { isAiSnapshot, unwrapAiSnapshot } from '@/lib/firstVisit/aiFill';
 
 // A target the survey is rendering for. The deal-scoped visit root is a
 // synthetic target whose id === inspectionId.
@@ -55,14 +58,18 @@ export function UnitSurvey({
   breadcrumb?: string[];
   phaseIds?: string[];
 }) {
+  const { phases: configPhases } = useSurveyConfig();
   const [answers, setAnswers] = useState<Record<string, LocalAnswer>>({});
+  // Keys of fields just populated by a voice fill — drives the transient
+  // "✦ from voice" highlight; cleared after a short delay.
+  const [justFilledKeys, setJustFilledKeys] = useState<Set<string>>(new Set());
   // WS-F media anchoring: pull photo/video file-questions out of their own
   // phase ("Property documentation", "Unit photos & videos") and inline them
   // under their related data question. We build the map across the whole
   // scope so an anchor in phase A can pull a file-question that was originally
   // in phase B.
   const phases = useMemo(() => {
-    const raw = phasesForScope(scope, phaseIds);
+    const raw = filterPhasesForScope(configPhases, scope, phaseIds);
     const allInScope = raw.flatMap((p) => p.questions);
     const anchorMap = buildAnchorMap(allInScope);
     const anchoredSlugs = new Set<string>();
@@ -70,11 +77,13 @@ export function UnitSurvey({
       for (const q of arr) anchoredSlugs.add(q.slug);
     }
     return filterOutAnchored(raw, anchoredSlugs);
-  }, [scope, phaseIds]);
+  }, [configPhases, scope, phaseIds]);
   const anchorMap = useMemo(() => {
-    const allInScope = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
+    const allInScope = filterPhasesForScope(configPhases, scope, phaseIds).flatMap(
+      (p) => p.questions,
+    );
     return buildAnchorMap(allInScope);
-  }, [scope, phaseIds]);
+  }, [configPhases, scope, phaseIds]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const stripRef = useRef<HTMLDivElement>(null);
   const activeChipRef = useRef<HTMLButtonElement>(null);
@@ -292,22 +301,21 @@ export function UnitSurvey({
     return m;
   }, [answers, target.id]);
 
-  // Task 4: when a controller answer changes such that a previously-answered
-  // dependent becomes hidden, clear the dependent's stored value so stale data
-  // is never submitted. Self-healing: keyed on the answers map, so it fires no
-  // matter which path wrote the controller. Reuses the existing onChange autosave
-  // path (Dexie put + enqueue) by writing value:null for each hidden, non-empty
-  // dependent across the whole scope (not just the visible phase).
-  const allScopeQuestions = useMemo(() => {
-    const inPhases = phasesForScope(scope, phaseIds).flatMap((p) => p.questions);
-    return inPhases;
-  }, [scope, phaseIds]);
+  // When a controller answer changes such that a previously-answered dependent
+  // becomes hidden, clear the dependent's stored value so stale data is never
+  // submitted. Self-healing: keyed on the answers map, so it fires no matter
+  // which path wrote the controller. Reuses the onChange autosave path (Dexie
+  // put + enqueue) by writing value:null for each hidden, non-empty dependent
+  // across the whole scope (not just the visible phase).
+  const allScopeQuestions = useMemo(
+    () => filterPhasesForScope(configPhases, scope, phaseIds).flatMap((p) => p.questions),
+    [configPhases, scope, phaseIds],
+  );
   useEffect(() => {
     const toClear: FirstVisitQuestion[] = [];
     for (const q of allScopeQuestions) {
       if (!q.visible_when) continue;
       if (isVisible(q.visible_when, valueByKey)) continue;
-      // Hidden now. Clear only if it currently holds a value.
       const key = `${target.id}::${areaKeyFor(q)}::${q.slug}`;
       const v = answers[key]?.value;
       if (v === null || v === undefined || v === '') continue;
@@ -317,9 +325,53 @@ export function UnitSurvey({
     for (const q of toClear) {
       void onChange(q, { value: null, wasAcceptedAsIs: false });
     }
-    // onChange is stable enough for this purpose; depending on it would loop.
+    // onChange is stable enough here; depending on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueByKey, allScopeQuestions, answers, target.id]);
+
+  // Resolve the "Pre-filled" banner value for a field: an unconfirmed AI voice
+  // suggestion (stored on the answer row's snapshot) takes precedence, falling
+  // back to the hub snapshot. Step-aware so AI-filled repeater rows resolve too.
+  const aiOrHubValue = (areaKey: string, slug: string, stepIndex: number | null) => {
+    const key =
+      stepIndex == null
+        ? `${target.id}::${areaKey}::${slug}`
+        : `${target.id}::${areaKey}::${slug}::${stepIndex}`;
+    const snap = answers[key]?.hub_suggestion_snapshot;
+    if (isAiSnapshot(snap)) {
+      const v = unwrapAiSnapshot(snap);
+      if (v !== undefined && v !== null && v !== '') return v;
+    }
+    return snapshot ? lookupHubValue(snapshot, scopeId, slug) : undefined;
+  };
+
+  const rowKey = (r: LocalAnswer) =>
+    r.step_index == null
+      ? `${r.target_id}::${r.area_key}::${r.question_key}`
+      : `${r.target_id}::${r.area_key}::${r.question_key}::${r.step_index}`;
+
+  // Merge AI-written suggestion rows into the in-memory answers map so the
+  // fields re-render with their "Pre-filled / Accept" banners immediately, and
+  // briefly flag them as just-filled for the highlight.
+  const mergeAiRows = (rows: LocalAnswer[]) => {
+    if (rows.length === 0) return;
+    const keys = rows.map(rowKey);
+    setAnswers((a) => {
+      const next = { ...a };
+      for (let i = 0; i < rows.length; i++) next[keys[i]] = rows[i];
+      return next;
+    });
+    setJustFilledKeys(new Set(keys));
+    setTimeout(() => setJustFilledKeys(new Set()), 2500);
+  };
+
+  const isJustFilled = (areaKey: string, slug: string, stepIndex: number | null) => {
+    const key =
+      stepIndex == null
+        ? `${target.id}::${areaKey}::${slug}`
+        : `${target.id}::${areaKey}::${slug}::${stepIndex}`;
+    return justFilledKeys.has(key);
+  };
 
   // Progress across the whole scope: required answered / required total.
   // Anchored file-questions render inside another phase but still count
@@ -502,11 +554,20 @@ export function UnitSurvey({
             {scopeLabel(scope)}
           </span>
         </div>
+        <SectionVoicePrompts
+          phaseId={phase.id}
+          inspectionId={inspectionId}
+          targetId={target.id}
+          scope={scope}
+          ctx={ctx}
+          getAnswers={() => answers}
+          onRowsWritten={mergeAiRows}
+        />
         <div className="mt-2 flex flex-col gap-3">
           {buildRenderPlan(phase.questions).map((node) => {
             if (node.kind === 'group') {
-              // A group of branching dependents is unusual, but if every
-              // question in the block is hidden, skip the whole block.
+              // Conditional branching: if every question in the block is hidden
+              // (e.g. its gate controller is off), skip the whole block.
               const visibleGroupQs = node.questions.filter((gq) =>
                 isVisible(gq.visible_when, valueByKey),
               );
@@ -529,8 +590,11 @@ export function UnitSurvey({
                     inspectionId={inspectionId}
                     targetId={target.id}
                     areaKey={phase.id}
-                    hubValueLookup={(slug) =>
-                      snapshot ? lookupHubValue(snapshot, scopeId, slug) : undefined
+                    hubValueLookup={(slug, stepIndex) =>
+                      aiOrHubValue(phase.id, slug, stepIndex)
+                    }
+                    justFilledLookup={(slug, stepIndex) =>
+                      isJustFilled(phase.id, slug, stepIndex)
                     }
                     answers={answers}
                     onChange={onChange}
@@ -635,7 +699,8 @@ export function UnitSurvey({
                   targetId={target.id}
                   areaKey={phase.id}
                   stepIndex={null}
-                  hubValue={snapshot ? lookupHubValue(snapshot, scopeId, q.slug) : undefined}
+                  hubValue={aiOrHubValue(phase.id, q.slug, null)}
+                  justFilled={isJustFilled(phase.id, q.slug, null)}
                   answers={answers}
                   onChange={onChange}
                   setNotes={setNotes}

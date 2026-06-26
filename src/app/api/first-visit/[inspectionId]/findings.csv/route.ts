@@ -9,24 +9,24 @@ const BUCKETS: Record<string, string> = {
   audio: 'first-visit-audio',
 };
 
-// The nine finding field slugs, stored on first_visit_answers with
-// question_key = '<slug>' and a separate step_index column.
+// The Issue-log field slugs (V1 redesign — formerly finding_*), stored on
+// first_visit_answers with question_key = '<slug>' and a separate step_index.
 const FINDING_FIELD_SLUGS = [
-  'finding_item_name',
-  'finding_category',
-  'finding_location',
-  'finding_resolution',
-  'finding_quantity',
-  'finding_cost_estimate_eur',
-  'finding_urgency',
-  'finding_notes',
+  'issue_name',
+  'issue_type',
+  'issue_location',
+  'issue_resolution',
+  'issue_quantity',
+  'issue_cost_estimate_eur',
+  'issue_urgency',
+  'issue_notes',
 ] as const;
 
-// Finding media is stored with question_key = `finding_media::<stepIndex>`
+// Issue media is stored with question_key = `issue_media::<stepIndex>`
 // (see StepGroup.tsx). Pull the step index back out so we can pair media with
-// the finding fields that share the same (target_id, step_index).
+// the issue fields that share the same (target_id, step_index).
 export function parseFindingMediaStep(questionKey: string): number | null {
-  const m = /^finding_media::(\d+)$/.exec(questionKey);
+  const m = /^issue_media::(\d+)$/.exec(questionKey);
   if (!m) return null;
   const n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
@@ -133,14 +133,14 @@ export async function GET(
 
     rows.push({
       unit_identifier,
-      item_name: toStringOrEmpty(f.finding_item_name),
-      category: toStringOrEmpty(f.finding_category),
-      location_in_unit: toStringOrNull(f.finding_location),
-      resolution: toStringOrEmpty(f.finding_resolution),
-      quantity: toNumberOrNull(f.finding_quantity),
-      cost_estimate_eur: toNumberOrNull(f.finding_cost_estimate_eur),
-      urgency: toStringOrNull(f.finding_urgency),
-      notes: toStringOrNull(f.finding_notes),
+      item_name: toStringOrEmpty(f.issue_name),
+      category: toStringOrEmpty(f.issue_type),
+      location_in_unit: toStringOrNull(f.issue_location),
+      resolution: toStringOrEmpty(f.issue_resolution),
+      quantity: toNumberOrNull(f.issue_quantity),
+      cost_estimate_eur: toNumberOrNull(f.issue_cost_estimate_eur),
+      urgency: toStringOrNull(f.issue_urgency),
+      notes: toStringOrNull(f.issue_notes),
       media_links,
     });
   }

@@ -9,12 +9,13 @@
 
 export type FindingListType = 'Shopping' | 'Renovation' | 'Ops';
 
-// Insertion order here defines the picker order.
+// Insertion order here defines the picker order. Aligned with the V1 redesign
+// Issue-log "Resolution" options (issue_resolution): Buy · Fix · Replace · Monitor.
 export const RESOLUTION_LIST_TYPE: Record<string, FindingListType> = {
-  'Buy new (add)': 'Shopping',
+  Buy: 'Shopping',
+  Fix: 'Renovation',
   Replace: 'Shopping',
-  Repair: 'Renovation',
-  'Deep clean': 'Ops',
+  Monitor: 'Ops',
 };
 
 export const FINDING_RESOLUTION_OPTIONS: string[] =
