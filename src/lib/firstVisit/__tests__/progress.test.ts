@@ -152,13 +152,15 @@ describe('computeProgressFromAnswers', () => {
 });
 
 describe('computeProgressFromAnswers phase filter', () => {
-  it('filtered deal progress for phases 1 and 11 sums to the unfiltered total', () => {
-    const whole = computeProgressFromAnswers('deal', []);
-    const meta = computeProgressFromAnswers('deal', [], ['1']);
-    const evaluation = computeProgressFromAnswers('deal', [], ['11']);
-    expect(meta.total + evaluation.total).toBe(whole.total);
-    expect(meta.total).toBeGreaterThan(0);
-    expect(evaluation.total).toBeGreaterThan(0);
+  it('filtered unit_category progress for two phase subsets sums to the unfiltered total', () => {
+    // unit_category spans phases 8..15. Splitting them into two disjoint subsets
+    // and filtering each must add back up to the unfiltered scope total.
+    const whole = computeProgressFromAnswers('unit_category', []);
+    const firstHalf = computeProgressFromAnswers('unit_category', [], ['8', '9', '10', '11']);
+    const secondHalf = computeProgressFromAnswers('unit_category', [], ['12', '13', '14', '15']);
+    expect(firstHalf.total + secondHalf.total).toBe(whole.total);
+    expect(firstHalf.total).toBeGreaterThan(0);
+    expect(secondHalf.total).toBeGreaterThan(0);
   });
 
   it('counts against an injected phases set, not the global config', () => {
@@ -214,17 +216,79 @@ describe('computeProgressFromAnswers phase filter', () => {
   });
 
   it('an answer only counts toward the card that contains its question', () => {
-    const meta = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['1'],
+    // fv_readiness_health_score lives in the unit_category "Final assessment"
+    // phase '15'. It must not count toward an unrelated phase card ('8'), only
+    // toward the card whose filter includes its phase ('15').
+    const identity = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['8'],
     );
-    const evaluation = computeProgressFromAnswers(
-      'deal',
-      [makeAnswer('fv_readiness_health_score', '7')],
-      ['11'],
+    const finalAssessment = computeProgressFromAnswers(
+      'unit_category',
+      [makeAnswer('fv_readiness_health_score', '7', { scope: 'unit_category' })],
+      ['15'],
     );
-    expect(meta.done).toBe(0);
-    expect(evaluation.done).toBe(1);
+    expect(identity.done).toBe(0);
+    expect(finalAssessment.done).toBe(1);
+  });
+
+  it('excludes required questions hidden by a visible_when gate from the denominator', () => {
+    const base = {
+      label: '',
+      description: null,
+      scope: 'location' as HubScope,
+      mode: 'data' as const,
+      type: 'text' as const,
+      options: [],
+      repeater: false,
+      pms_target: null,
+      status: 'existing' as const,
+      verdict: null,
+      notes: null,
+      phase_id: 'p',
+      phase_label: 'P',
+    };
+    const gate: FirstVisitQuestion = { ...base, slug: 'gate', type: 'boolean', required: false };
+    const dependent: FirstVisitQuestion = {
+      ...base,
+      slug: 'dep',
+      required: true,
+      visible_when: { question: 'gate', equals: true },
+    };
+    const phases: FirstVisitPhase[] = [
+      { id: 'p', label: 'P', questions: [gate, dependent] },
+    ];
+
+    // Gate unanswered → dependent hidden → not counted (total 0).
+    expect(computeProgressFromAnswers('location', [], undefined, phases).total).toBe(0);
+
+    // Gate = false → still hidden → not counted.
+    const off = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', false)],
+      undefined,
+      phases,
+    );
+    expect(off.total).toBe(0);
+
+    // Gate = true → dependent visible → counted, and answering it completes it.
+    const onEmpty = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true)],
+      undefined,
+      phases,
+    );
+    expect(onEmpty.total).toBe(1);
+    expect(onEmpty.done).toBe(0);
+
+    const onFilled = computeProgressFromAnswers(
+      'location',
+      [makeAnswer('gate', true), makeAnswer('dep', 'answered')],
+      undefined,
+      phases,
+    );
+    expect(onFilled.total).toBe(1);
+    expect(onFilled.done).toBe(1);
   });
 });

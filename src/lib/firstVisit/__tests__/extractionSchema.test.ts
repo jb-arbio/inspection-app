@@ -6,29 +6,29 @@ import type { FirstVisitQuestion } from '../questions';
 describe('buildExtractionSchema', () => {
   const built = buildExtractionSchema([
     'fv_location_quality', // single select
-    'finding_item_name', // repeater text
-    'finding_category', // repeater select w/ options
-    'finding_media', // repeater file → excluded
+    'issue_name', // repeater text
+    'issue_type', // repeater select w/ options
+    'issue_media', // repeater file → excluded
     'totally_unknown_slug', // unknown → excluded
   ]);
 
   it('partitions singles vs repeater groups and drops file/unknown slugs', () => {
     expect(built.singleSlugs).toEqual(['fv_location_quality']);
-    expect(built.groupSlugsByGroup.finding).toEqual(['finding_item_name', 'finding_category']);
-    expect(built.groupSlugsByGroup.finding).not.toContain('finding_media');
+    expect(built.groupSlugsByGroup.issue).toEqual(['issue_name', 'issue_type']);
+    expect(built.groupSlugsByGroup.issue).not.toContain('issue_media');
   });
 
   it('constrains a select field to exactly its options plus null', () => {
     const schema = built.schema as any;
-    const catEntry = schema.properties.items.items.properties.fields.properties.finding_category;
+    const catEntry = schema.properties.items.items.properties.fields.properties.issue_type;
     expect(catEntry.properties.value.enum).toEqual([
-      'Furniture', 'Appliance', 'Equipment', 'Bathroom', 'Structural/Building', 'Consumable', 'Other', null,
+      'Furniture', 'Equipment', 'Maintenance', 'Other', null,
     ]);
   });
 
   it('lists targeted groups in the item group_id enum', () => {
     const schema = built.schema as any;
-    expect(schema.properties.items.items.properties.group_id.enum).toEqual(['finding']);
+    expect(schema.properties.items.items.properties.group_id.enum).toEqual(['issue']);
   });
 
   it('includes a field\'s description in the catalogue when it has one', () => {
@@ -41,8 +41,8 @@ describe('buildExtractionSchema', () => {
   });
 
   it('marks media (file) slugs as not fillable', () => {
-    expect(isFillableSlug('finding_media')).toBe(false);
-    expect(isFillableSlug('finding_item_name')).toBe(true);
+    expect(isFillableSlug('issue_media')).toBe(false);
+    expect(isFillableSlug('issue_name')).toBe(true);
     expect(isFillableSlug('totally_unknown_slug')).toBe(false);
   });
 

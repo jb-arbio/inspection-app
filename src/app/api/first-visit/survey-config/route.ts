@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
 import { getHubRouteContext } from '@/lib/firstVisit/hubSupabaseAdmin';
-import { isAdminEmail } from '@/lib/firstVisit/adminAccess';
 import { validateSurveyContent } from '@/lib/firstVisit/validateSurveyContent';
 import { QUESTION_STRUCTURE } from '@/lib/firstVisit/questionStructure';
 import type { ContentConfig } from '@/lib/firstVisit/surveyConfig';
@@ -58,15 +57,12 @@ export async function GET(req: Request) {
 }
 
 // POST /api/first-visit/survey-config — publish a new survey version.
-// Admin-only. Validates the content, then inserts a published row at
-// (max published version) + 1.
+// Any authenticated user may publish (the whole app is behind login).
+// Validates the content, then inserts a published row at (max published) + 1.
 export async function POST(req: Request) {
   const auth = await getHubRouteContext(getHubSupabase());
   if (!auth) return NextResponse.json({ error: 'unauth' }, { status: 401 });
   const { supabase, email } = auth;
-  if (!isAdminEmail(email)) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
 
   const body = await req.json();
   const content = body?.content as ContentConfig;

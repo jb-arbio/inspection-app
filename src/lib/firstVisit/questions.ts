@@ -78,6 +78,11 @@ export type FirstVisitQuestion = {
   // media anchoring). Renderer in WS-B does not act on this; it is here so
   // the type is ready for WS-F.
   anchor_to?: string;
+  // Conditional visibility gate. When set, this question only renders (and only
+  // counts toward required / keeps its value) while `isVisible` is satisfied
+  // against the controlling question's current answer. Engineer-owned: lives in
+  // the structural overlay (questionStructure.ts), not in editor content.
+  visible_when?: VisibleWhen;
 };
 
 export type FirstVisitPhase = {
@@ -207,4 +212,56 @@ export function filterOutAnchored(
       questions: p.questions.filter((q) => !anchoredSlugs.has(q.slug)),
     }))
     .filter((p) => p.questions.length > 0);
+}
+
+// Declarative conditional-branching predicate. A question's `visible_when` rule
+// names a controlling question (by slug) and a condition over that question's
+// answer; `isVisible` decides whether the dependent question should render,
+// count toward required, and keep its value. Pure predicate.
+//
+// `answersByKey` maps controlling question slug → its current answer value
+// (string, boolean, or string[] for multi-selects). Unanswered controllers:
+// equals/in are NOT satisfied (hidden); not_equals/not_in are NOT excluded
+// (visible). Comparisons are strict (`===`), so booleans compare by identity.
+export type VisibleWhen = {
+  question: string;
+  equals?: unknown;
+  not_equals?: unknown;
+  in?: unknown[];
+  not_in?: unknown[];
+};
+
+// A single answer matches `candidate` if it equals it, or — for multi-select
+// answers (arrays) — if any selected option equals it.
+function matchesValue(answer: unknown, candidate: unknown): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => v === candidate);
+  return answer === candidate;
+}
+// As above but against a list: true if the answer (or any selected option) is
+// in `list`.
+function inList(answer: unknown, list: unknown[]): boolean {
+  if (Array.isArray(answer)) return answer.some((v) => list.includes(v));
+  return list.includes(answer);
+}
+
+export function isVisible(
+  rule: VisibleWhen | undefined,
+  answersByKey: Map<string, unknown>,
+): boolean {
+  if (!rule) return true;
+  const answered = answersByKey.has(rule.question);
+  const a = answersByKey.get(rule.question);
+  if ('equals' in rule && rule.equals !== undefined) {
+    return answered && matchesValue(a, rule.equals);
+  }
+  if ('in' in rule && rule.in) {
+    return answered && inList(a, rule.in);
+  }
+  if ('not_equals' in rule && rule.not_equals !== undefined) {
+    return !answered || !matchesValue(a, rule.not_equals);
+  }
+  if ('not_in' in rule && rule.not_in) {
+    return !answered || !inList(a, rule.not_in);
+  }
+  return true;
 }

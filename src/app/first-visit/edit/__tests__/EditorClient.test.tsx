@@ -54,8 +54,9 @@ function jsonRes(status: number, body: unknown) {
   } as Response;
 }
 
-// A draft whose slugs ARE present in QUESTION_STRUCTURE, so the new-field banner
-// is absent unless a brand-new field is added.
+// A draft whose slugs ARE present in QUESTION_STRUCTURE (both parking fields
+// carry a visible_when overlay entry), so the new-field banner is absent unless
+// a brand-new (unmapped) field is added.
 const MAPPED_DRAFT_CONTENT = {
   phases: [
     {
@@ -63,21 +64,21 @@ const MAPPED_DRAFT_CONTENT = {
       label: 'Visit',
       questions: [
         {
-          slug: 'fv_visit_date',
-          label: 'Visit date',
+          slug: 'fv_parking_dedicated_spots',
+          label: 'Number of dedicated spots',
           description: null,
-          scope: 'deal',
-          type: 'date',
+          scope: 'location',
+          type: 'number',
           options: [],
           required: false,
           phase_id: 'p1',
           phase_label: 'Visit',
         },
         {
-          slug: 'fv_visit_visitor_name',
-          label: 'Visitor name',
+          slug: 'fv_parking_spot_number',
+          label: 'Exact parking spot number',
           description: null,
-          scope: 'deal',
+          scope: 'location',
           type: 'text',
           options: [],
           required: false,

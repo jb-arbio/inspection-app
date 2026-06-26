@@ -1,6 +1,6 @@
 {
-  "version": "2026-06-24",
-  "generated_at": "2026-06-24T00:00:00Z",
+  "version": "2026-06-25-redesign-v1",
+  "generated_at": "2026-06-25T00:00:00Z",
   "phases": [
     {
       "id": "1",
@@ -32,12 +32,12 @@
     },
     {
       "id": "2",
-      "label": "Property approach (location & arrival)",
+      "label": "Location & neighbourhood",
       "questions": [
         {
           "slug": "fv_location_quality",
           "label": "Location quality for guests",
-          "description": null,
+          "description": "What to consider: connection to public transport; vicinity to city centre; vicinity to landmarks; offering of restaurants/bars/supermarkets nearby.",
           "scope": "location",
           "type": "select",
           "options": [
@@ -48,41 +48,7 @@
           ],
           "required": true,
           "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
-        },
-        {
-          "slug": "fv_location_noise_level",
-          "label": "Noise heard with windows closed?",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "No",
-            "Yes-not disturbing",
-            "Yes-occasionally",
-            "Yes-regularly"
-          ],
-          "required": true,
-          "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
-        },
-        {
-          "slug": "fv_location_noise_source",
-          "label": "Noise source",
-          "description": "Only if noise present",
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Street",
-            "Tram/train",
-            "Neighbors",
-            "Construction",
-            "Aircraft",
-            "Other"
-          ],
-          "required": false,
-          "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
+          "phase_label": "Location & neighbourhood"
         },
         {
           "slug": "fv_location_safety_concern",
@@ -97,29 +63,18 @@
           ],
           "required": true,
           "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
-        },
-        {
-          "slug": "fv_location_notes",
-          "label": "Location notes",
-          "description": "Only if notable",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
+          "phase_label": "Location & neighbourhood"
         },
         {
           "slug": "fv_neighbourhood_narrative",
           "label": "Neighbourhood narrative (3-5 sentences)",
-          "description": null,
+          "description": "Can be AI pre-filled from the address, then PM confirms/edits.",
           "scope": "location",
           "type": "text",
           "options": [],
           "required": true,
           "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
+          "phase_label": "Location & neighbourhood"
         },
         {
           "slug": "fv_neighbourhood_vibe_tags",
@@ -139,9 +94,10 @@
             "Mixed-use",
             "Up-and-coming"
           ],
-          "required": true,
+          "required": false,
+          "multi_select": true,
           "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
+          "phase_label": "Location & neighbourhood"
         },
         {
           "slug": "fv_best_for_guest_type",
@@ -158,8 +114,20 @@
             "Long-stay"
           ],
           "required": true,
+          "multi_select": true,
           "phase_id": "2",
-          "phase_label": "Property approach (location & arrival)"
+          "phase_label": "Location & neighbourhood"
+        },
+        {
+          "slug": "fv_location_notes",
+          "label": "Location notes",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "2",
+          "phase_label": "Location & neighbourhood"
         }
       ]
     },
@@ -169,20 +137,18 @@
       "questions": [
         {
           "slug": "fv_parking_actual_type",
-          "label": "Actual parking type if different",
-          "description": "Only if parking confirm = Different",
+          "label": "Is there parking at the property?",
+          "description": "Gate: when \"None\", all parking sub-questions collapse.",
           "scope": "location",
           "type": "select",
           "options": [
             "On-prem free",
             "On-prem paid",
-            "Street free",
-            "Street paid",
             "Garage on-site",
             "Garage nearby",
             "None"
           ],
-          "required": false,
+          "required": true,
           "phase_id": "3",
           "phase_label": "Building exterior & parking"
         },
@@ -191,9 +157,53 @@
           "label": "Number of dedicated spots",
           "description": null,
           "scope": "location",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_parking_spot_number",
+          "label": "Exact parking spot number",
+          "description": null,
+          "scope": "location",
           "type": "text",
           "options": [],
-          "required": true,
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_parking_access_instructions",
+          "label": "Parking access instructions",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_photo_parking_spot",
+          "label": "Photo of the parking spot",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_video_parking_access",
+          "label": "Parking access video",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": false,
           "phase_id": "3",
           "phase_label": "Building exterior & parking"
         },
@@ -212,20 +222,9 @@
           "phase_label": "Building exterior & parking"
         },
         {
-          "slug": "fv_parking_access_instructions",
-          "label": "Parking access instructions",
-          "description": "Step-by-step access",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "3",
-          "phase_label": "Building exterior & parking"
-        },
-        {
           "slug": "fv_parking_nearby_options",
           "label": "Nearby parking options",
-          "description": "Public/paid lots within walking distance; with prices if possible",
+          "description": "AI-generated from the address; PM validates/regenerates.",
           "scope": "location",
           "type": "text",
           "options": [],
@@ -234,46 +233,9 @@
           "phase_label": "Building exterior & parking"
         },
         {
-          "slug": "fv_building_elevator_working",
-          "label": "Elevator working today?",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No",
-            "Partially"
-          ],
-          "required": true,
-          "phase_id": "3",
-          "phase_label": "Building exterior & parking"
-        },
-        {
-          "slug": "fv_building_amenities_verify",
-          "label": "Building amenities",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Aufzug",
-            "Gemeinschafts Balkon/Terrasse",
-            "Gemeinschaftsgarten",
-            "Schwimmbad",
-            "Sauna",
-            "Fitnessraum",
-            "Konferenzräume",
-            "Reception/Concierge"
-          ],
-          "required": true,
-          "multi_select": true,
-          "allow_custom_options": true,
-          "phase_id": "3",
-          "phase_label": "Building exterior & parking"
-        },
-        {
           "slug": "fv_building_state",
           "label": "Building state",
-          "description": null,
+          "description": "What to look at: facade condition; entrance/lobby cleanliness; visible damage or wear; lighting; signs of disrepair.",
           "scope": "location",
           "type": "select",
           "options": [
@@ -319,7 +281,7 @@
         {
           "slug": "fv_building_construction_nearby",
           "label": "Construction site/disruption nearby?",
-          "description": "Explain if yes",
+          "description": null,
           "scope": "location",
           "type": "boolean",
           "options": [
@@ -331,9 +293,32 @@
           "phase_label": "Building exterior & parking"
         },
         {
+          "slug": "fv_building_amenities_verify",
+          "label": "Building amenities",
+          "description": null,
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Aufzug",
+            "Gemeinschafts Balkon/Terrasse",
+            "Gemeinschaftsgarten",
+            "Schwimmbad",
+            "Sauna",
+            "Fitnessraum",
+            "Konferenzräume",
+            "Reception/Concierge",
+            "None"
+          ],
+          "required": true,
+          "multi_select": true,
+          "allow_custom_options": true,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
           "slug": "fv_accessibility_step_free_entry",
           "label": "Step-free entry to the building?",
-          "description": "Whether a guest can enter the building without using stairs.",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -348,7 +333,7 @@
         {
           "slug": "fv_accessibility_ramps",
           "label": "Ramps / accessibility aids present?",
-          "description": "Free text about any ramps, lifts, or accessibility aids the visitor observes.",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
@@ -359,17 +344,6 @@
         {
           "slug": "fv_accessibility_notes",
           "label": "Other accessibility / mobility notes",
-          "description": "Free text — anything else relevant to mobility-impaired guests (door thresholds, grab bars, etc.).",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "3",
-          "phase_label": "Building exterior & parking"
-        },
-        {
-          "slug": "fv_parking_spot_number",
-          "label": "Exact parking spot number",
           "description": null,
           "scope": "location",
           "type": "text",
@@ -379,13 +353,63 @@
           "phase_label": "Building exterior & parking"
         },
         {
-          "slug": "fv_photo_parking_spot",
-          "label": "Photo of the parking spot",
-          "description": null,
+          "slug": "fv_building_elevator_present",
+          "label": "Is there an elevator?",
+          "description": "Gate: when \"No\", elevator sub-questions collapse.",
           "scope": "location",
-          "type": "file",
-          "options": [],
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
           "required": true,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_building_elevator_working",
+          "label": "Elevator working today?",
+          "description": null,
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No",
+            "Partially"
+          ],
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_building_elevator_size",
+          "label": "Elevator estimated size / capacity",
+          "description": null,
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Small (1-2 persons)",
+            "Medium (3-4)",
+            "Large (5+ / goods)"
+          ],
+          "required": false,
+          "phase_id": "3",
+          "phase_label": "Building exterior & parking"
+        },
+        {
+          "slug": "fv_building_elevator_condition",
+          "label": "Elevator condition",
+          "description": "What to look at: cleanliness, lighting, signs of wear/faults, smoothness of operation.",
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Excellent",
+            "Good",
+            "Acceptable",
+            "Needs attention",
+            "Poor"
+          ],
+          "required": false,
           "phase_id": "3",
           "phase_label": "Building exterior & parking"
         }
@@ -396,24 +420,9 @@
       "label": "Building access & check-in",
       "questions": [
         {
-          "slug": "fv_checkin_complexity",
-          "label": "Check-in complexity overall",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Simple",
-            "Moderate",
-            "Complex"
-          ],
-          "required": true,
-          "phase_id": "4",
-          "phase_label": "Building access & check-in"
-        },
-        {
           "slug": "fv_step_name",
-          "label": "Step name",
-          "description": "Repeats per check-in step",
+          "label": "Check-in step name",
+          "description": "Free-text per step; repeatable — all per-step fields below repeat for each step.",
           "scope": "location",
           "type": "text",
           "options": [],
@@ -424,7 +433,7 @@
         {
           "slug": "fv_step_access_point",
           "label": "Access point",
-          "description": "Repeats per step",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -440,7 +449,7 @@
         {
           "slug": "fv_step_lock_type",
           "label": "Lock type",
-          "description": "Repeats per step",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -458,7 +467,7 @@
         {
           "slug": "fv_step_smart_lock_provider",
           "label": "Smart lock provider",
-          "description": "Only if Smart Lock",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -476,7 +485,7 @@
         {
           "slug": "fv_step_smart_lock_device_id",
           "label": "Smart lock device ID / serial",
-          "description": "Per step; only if Smart Lock. Needed for Breezeway/Conduit setup",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
@@ -487,8 +496,8 @@
         {
           "slug": "fv_step_lock_brand",
           "label": "Lock brand / manufacturer",
-          "description": "Per step; free text",
-          "scope": "unit_category",
+          "description": null,
+          "scope": "location",
           "type": "text",
           "options": [],
           "required": false,
@@ -512,7 +521,7 @@
         {
           "slug": "fv_step_key_storage_method",
           "label": "Key storage method",
-          "description": "Only if Physical Key",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -527,7 +536,7 @@
         {
           "slug": "fv_step_storage_brand",
           "label": "Storage brand",
-          "description": "Only if Keybox/Locker",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
@@ -538,7 +547,7 @@
         {
           "slug": "fv_step_default_access_code",
           "label": "Default access code",
-          "description": "SENSITIVE / PII; only if Keypad/Keybox",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
@@ -547,13 +556,39 @@
           "phase_label": "Building access & check-in"
         },
         {
+          "slug": "fv_video_checkin_walkthrough",
+          "label": "Check-in walkthrough video",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": true,
+          "phase_id": "4",
+          "phase_label": "Building access & check-in"
+        },
+        {
           "slug": "fv_checkin_notes_overall",
           "label": "Overall check-in notes (not per-step)",
-          "description": "Only if unusual; distinct from per-step lock notes",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
           "required": false,
+          "phase_id": "4",
+          "phase_label": "Building access & check-in"
+        },
+        {
+          "slug": "fv_checkin_complexity",
+          "label": "Check-in complexity overall",
+          "description": "What to weigh: number of access steps; number of locks/codes; whether a human handover is needed; signage clarity; distance from entrance to unit.",
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Simple",
+            "Moderate",
+            "Complex"
+          ],
+          "required": true,
           "phase_id": "4",
           "phase_label": "Building access & check-in"
         }
@@ -561,12 +596,12 @@
     },
     {
       "id": "5",
-      "label": "Building infrastructure & utilities",
+      "label": "Building infrastructure & services",
       "questions": [
         {
           "slug": "fv_storage_onsite_check",
-          "label": "Luggage storage on-site",
-          "description": null,
+          "label": "Luggage storage on-site?",
+          "description": "Gate: when \"No\", storage sub-questions collapse.",
           "scope": "location",
           "type": "boolean",
           "options": [
@@ -575,7 +610,7 @@
           ],
           "required": true,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_storage_location",
@@ -592,18 +627,29 @@
           ],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_storage_access_instructions",
-          "label": "Access instructions for guest",
+          "label": "Storage access instructions for guest",
           "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
-          "required": true,
+          "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_photo_storage_room",
+          "label": "Storage room photo",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_storage_comments",
@@ -614,7 +660,21 @@
           "options": [],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_trash_area_present",
+          "label": "Is there a designated trash area?",
+          "description": "Gate for the trash block.",
+          "scope": "location",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_trash_container_location",
@@ -630,9 +690,9 @@
             "Street",
             "Inside apartment"
           ],
-          "required": true,
+          "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_trash_handler",
@@ -646,9 +706,9 @@
             "Guest",
             "Arbio team"
           ],
-          "required": true,
+          "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_trash_pickup_schedule",
@@ -659,70 +719,34 @@
           "options": [],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
-          "slug": "fv_fusebox_location",
-          "label": "Fuse box location",
-          "description": "Often per building, but may be per-unit in older European stock — note location precisely",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "fv_fusebox_access",
-          "label": "Fuse box access",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Guest can access",
-            "Staff/technician only"
-          ],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "fv_fusebox_reset_instructions",
-          "label": "Fuse box reset instructions",
-          "description": null,
+          "slug": "fv_trash_guest_instructions",
+          "label": "Guest trash instructions (how guests dispose of trash)",
+          "description": "Always asked — guests need disposal guidance regardless of an on-site container.",
           "scope": "location",
           "type": "text",
           "options": [],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
-          "slug": "fv_facility_manager_contact",
-          "label": "Facility manager / Hausverwaltung contact",
-          "description": "Important for ops handover — try to obtain on-site (name + phone or email).",
+          "slug": "fv_video_trash_location",
+          "label": "Trash location photo/video",
+          "description": null,
           "scope": "location",
-          "type": "text",
+          "type": "file",
           "options": [],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         },
         {
-          "slug": "fv_fire_exit_primary",
-          "label": "Fire exit route from unit",
-          "description": "Primary route",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities (fire safety)"
-        },
-        {
-          "slug": "fv_fire_exit_secondary",
-          "label": "Secondary fire exit available?",
-          "description": "Explain if yes",
+          "slug": "fv_fusebox_present",
+          "label": "Is there a central/building fuse box?",
+          "description": "Gate (building-level). The same question repeats per unit (see Unit safety).",
           "scope": "location",
           "type": "boolean",
           "options": [
@@ -731,7 +755,93 @@
           ],
           "required": true,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities (fire safety)"
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fusebox_location",
+          "label": "Fuse box location (building)",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fusebox_access",
+          "label": "Fuse box access (building)",
+          "description": null,
+          "scope": "location",
+          "type": "select",
+          "options": [
+            "Guest can access",
+            "Staff/technician only"
+          ],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fusebox_reset_instructions",
+          "label": "Fuse box reset instructions (building)",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_video_fusebox",
+          "label": "Fuse box video — location + reset (building)",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fire_safety_present",
+          "label": "Is there central/building fire safety?",
+          "description": "Gate (building-level): central extinguishers, marked exits, detectors. Repeats per unit.",
+          "scope": "location",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fire_exit_secondary",
+          "label": "Secondary fire exit available?",
+          "description": null,
+          "scope": "location",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_fire_exit_route_notes",
+          "label": "Fire exit route notes",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_fire_safety_concerns",
@@ -746,25 +856,36 @@
             "Flammable storage",
             "Other"
           ],
-          "required": true,
+          "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities (fire safety)"
+          "phase_label": "Building infrastructure & services"
         },
         {
-          "slug": "fv_fire_safety_notes",
-          "label": "Fire safety notes",
-          "description": "Only if concerns flagged",
+          "slug": "fv_video_fire_exit",
+          "label": "Fire exit route — video walkthrough",
+          "description": null,
           "scope": "location",
-          "type": "text",
+          "type": "file",
           "options": [],
           "required": false,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities (fire safety)"
+          "phase_label": "Building infrastructure & services"
+        },
+        {
+          "slug": "fv_photo_fire_safety",
+          "label": "Fire safety photos (extinguisher, exits, detectors)",
+          "description": null,
+          "scope": "location",
+          "type": "file",
+          "options": [],
+          "required": false,
+          "phase_id": "5",
+          "phase_label": "Building infrastructure & services"
         },
         {
           "slug": "fv_common_area",
           "label": "Common areas / building facilities",
-          "description": "One entry per shared space. Visitor walks the building and documents each common area found.",
+          "description": null,
           "scope": "location",
           "type": "select",
           "options": [
@@ -773,266 +894,22 @@
             "Courtyard",
             "SmokingArea",
             "Storage",
-            "Other",
             "Shared kitchen",
-            "Shared garden"
+            "Shared garden",
+            "Other",
+            "None"
           ],
           "required": false,
           "multi_select": true,
           "allow_custom_options": true,
           "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "utility.type",
-          "label": "Utility type",
-          "description": "One entry per utility company. Visitor asks Hausmeister/property manager for emergency contacts (Vattenfall, Stadtwerke, etc.).",
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Electricity",
-            "Water",
-            "Gas",
-            "Internet"
-          ],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "utility.provider_name",
-          "label": "Provider name",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "utility.account_number",
-          "label": "Account number",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "utility.emergency_contact",
-          "label": "Emergency contact",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "maintenance.category",
-          "label": "Procedure category",
-          "description": "One entry per staff-facing procedure (e.g. Bathroom ventilation, Fire alarm response, No electricity response). Visitor documents observed steps with photos / video.",
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Plumbing",
-            "Electrical",
-            "HVAC",
-            "Appliance",
-            "Other"
-          ],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "maintenance.title",
-          "label": "Procedure title",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "maintenance.steps",
-          "label": "Steps observed",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "maintenance.photo",
-          "label": "Procedure photo",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_item_name",
-          "label": "Item / issue (clear name)",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_category",
-          "label": "Category",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Furniture",
-            "Appliance",
-            "Equipment",
-            "Bathroom",
-            "Structural/Building",
-            "Consumable",
-            "Other"
-          ],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_location",
-          "label": "Location in unit",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Kitchen",
-            "Bathroom",
-            "Bedroom",
-            "Living room",
-            "Hallway",
-            "Balcony",
-            "Building/common",
-            "Other"
-          ],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_resolution",
-          "label": "Resolution",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Buy new (add)",
-            "Replace",
-            "Repair",
-            "Deep clean"
-          ],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_quantity",
-          "label": "Quantity",
-          "description": null,
-          "scope": "location",
-          "type": "number",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_cost_estimate_eur",
-          "label": "Cost estimate (€)",
-          "description": null,
-          "scope": "location",
-          "type": "number",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_urgency",
-          "label": "Urgency",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Blocks go-live",
-            "Nice-to-have"
-          ],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_notes",
-          "label": "Notes",
-          "description": null,
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "finding_media",
-          "label": "Photo / video",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "fv_video_fusebox",
-          "label": "Fuse box video (reset/operation)",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
-        },
-        {
-          "slug": "fv_photo_fusebox_location",
-          "label": "Photo of fuse box location",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "5",
-          "phase_label": "Building infrastructure & utilities"
+          "phase_label": "Building infrastructure & services"
         }
       ]
     },
     {
       "id": "6",
-      "label": "Building services & operational model",
+      "label": "Cleaning & laundry",
       "questions": [
         {
           "slug": "fv_cleaning_setup",
@@ -1048,38 +925,12 @@
           ],
           "required": true,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
-        },
-        {
-          "slug": "fv_cleaning_provider_name",
-          "label": "Cleaning provider name",
-          "description": "Only if external",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "6",
-          "phase_label": "Building services & operational model"
-        },
-        {
-          "slug": "fv_cleaning_takeover_possible",
-          "label": "Can Arbio take over existing cleaning?",
-          "description": null,
-          "scope": "location",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No",
-            "N/A"
-          ],
-          "required": true,
-          "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Cleaning & laundry"
         },
         {
           "slug": "fv_laundry_setup",
           "label": "Laundry setup",
-          "description": null,
+          "description": "Gate: delivery frequency shows unless \"Not yet set up\".",
           "scope": "location",
           "type": "select",
           "options": [
@@ -1090,18 +941,7 @@
           ],
           "required": true,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
-        },
-        {
-          "slug": "fv_laundry_provider_name",
-          "label": "Laundry provider name",
-          "description": "Only if external",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Cleaning & laundry"
         },
         {
           "slug": "fv_laundry_delivery_frequency",
@@ -1112,18 +952,18 @@
           "options": [],
           "required": false,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Cleaning & laundry"
         },
         {
           "slug": "fv_laundry_nearest_laundromat",
           "label": "Nearest laundromat for guests",
-          "description": "Only if no in-unit washer",
+          "description": null,
           "scope": "location",
           "type": "text",
           "options": [],
           "required": false,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Cleaning & laundry"
         },
         {
           "slug": "fv_extra_services_offered",
@@ -1145,7 +985,7 @@
           "required": true,
           "multi_select": true,
           "phase_id": "6",
-          "phase_label": "Building services & operational model"
+          "phase_label": "Cleaning & laundry"
         }
       ]
     },
@@ -1154,24 +994,60 @@
       "label": "WiFi",
       "questions": [
         {
+          "slug": "fv_wifi_present",
+          "label": "Wi-Fi available?",
+          "description": "Gate: when \"No\", WiFi sub-questions collapse.",
+          "scope": "location",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "7",
+          "phase_label": "WiFi"
+        },
+        {
+          "slug": "fv_wifi_ssid",
+          "label": "WiFi network name (SSID)",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "7",
+          "phase_label": "WiFi"
+        },
+        {
+          "slug": "fv_wifi_password",
+          "label": "WiFi password",
+          "description": null,
+          "scope": "location",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "7",
+          "phase_label": "WiFi"
+        },
+        {
           "slug": "fv_wifi_download_speed_mbps",
           "label": "WiFi download speed (Mbps)",
-          "description": "Speed test takes ~30-60s",
+          "description": null,
           "scope": "location",
           "type": "number",
           "options": [],
-          "required": true,
+          "required": false,
           "phase_id": "7",
           "phase_label": "WiFi"
         },
         {
           "slug": "fv_wifi_upload_speed_mbps",
           "label": "WiFi upload speed (Mbps)",
-          "description": "Same test as download",
+          "description": null,
           "scope": "location",
           "type": "number",
           "options": [],
-          "required": true,
+          "required": false,
           "phase_id": "7",
           "phase_label": "WiFi"
         },
@@ -1182,7 +1058,7 @@
           "scope": "location",
           "type": "text",
           "options": [],
-          "required": true,
+          "required": false,
           "phase_id": "7",
           "phase_label": "WiFi"
         },
@@ -1196,7 +1072,7 @@
             "Yes",
             "No"
           ],
-          "required": true,
+          "required": false,
           "phase_id": "7",
           "phase_label": "WiFi"
         }
@@ -1204,83 +1080,33 @@
     },
     {
       "id": "8",
-      "label": "Property documentation",
+      "label": "Unit identity",
       "questions": [
         {
-          "slug": "fv_video_checkin_walkthrough",
-          "label": "Check-in walkthrough video",
-          "description": "Covers all check-in steps",
-          "scope": "location",
+          "slug": "fv_unit_floor_number",
+          "label": "Floor of unit",
+          "description": null,
+          "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": true,
           "phase_id": "8",
-          "phase_label": "Property documentation"
+          "phase_label": "Unit identity"
         },
         {
-          "slug": "fv_video_trash_location",
-          "label": "Trash location photo/video",
+          "slug": "fv_unit_location_in_building",
+          "label": "Unit number / location (e.g. links · rechts · Mitte)",
           "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "8",
-          "phase_label": "Property documentation"
-        },
-        {
-          "slug": "fv_photo_storage_room",
-          "label": "Storage room photo",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "8",
-          "phase_label": "Property documentation"
-        },
-        {
-          "slug": "fv_video_parking_access",
-          "label": "Parking access video",
-          "description": "Only if parking available",
-          "scope": "location",
+          "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
           "phase_id": "8",
-          "phase_label": "Property documentation"
+          "phase_label": "Unit identity"
         },
-        {
-          "slug": "fv_photo_fusebox",
-          "label": "Fuse box photo",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "8",
-          "phase_label": "Property documentation"
-        },
-        {
-          "slug": "fv_photo_fire_safety",
-          "label": "Fire safety photos (extinguisher, exits, detectors)",
-          "description": null,
-          "scope": "location",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "8",
-          "phase_label": "Property documentation"
-        }
-      ]
-    },
-    {
-      "id": "9a",
-      "label": "Unit identity",
-      "questions": [
         {
           "slug": "fv_unit_type_check",
-          "label": "Unit type sanity check",
+          "label": "Unit type",
           "description": null,
           "scope": "unit_category",
           "type": "select",
@@ -1292,45 +1118,37 @@
             "Other"
           ],
           "required": true,
-          "phase_id": "9a",
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        },
+        {
+          "slug": "fv_unit_balcony_present",
+          "label": "Is there a balcony?",
+          "description": "Gate: when \"No\", balcony count collapses.",
+          "scope": "unit_category",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "8",
           "phase_label": "Unit identity"
         },
         {
           "slug": "fv_unit_balconies_count",
           "label": "Number of balconies",
-          "description": "May vary per individual unit within a category — capture per unit if they differ",
+          "description": null,
           "scope": "unit_category",
           "type": "number",
           "options": [],
-          "required": true,
-          "phase_id": "9a",
-          "phase_label": "Unit identity"
-        },
-        {
-          "slug": "fv_unit_location_in_building",
-          "label": "Location of unit in building",
-          "description": "e.g. 'second floor, east wing'. Genuinely per-individual-unit — capture per unit; unit_category is the closest scope we have",
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "9a",
-          "phase_label": "Unit identity"
-        },
-        {
-          "slug": "fv_unit_floor_number",
-          "label": "Floor of unit",
-          "description": "Genuinely per-individual-unit; in mixed-floor buildings capture per unit even within one category",
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "9a",
+          "required": false,
+          "phase_id": "8",
           "phase_label": "Unit identity"
         },
         {
           "slug": "fv_view_actual",
-          "label": "Actual view if different",
+          "label": "Unit view",
           "description": null,
           "scope": "unit_category",
           "type": "select",
@@ -1345,24 +1163,24 @@
             "Other"
           ],
           "required": false,
-          "phase_id": "9a",
+          "phase_id": "8",
           "phase_label": "Unit identity"
         },
         {
           "slug": "fv_view_comments",
           "label": "View comments",
-          "description": "Only if meaningfully different from owner claim",
+          "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9a",
+          "phase_id": "8",
           "phase_label": "Unit identity"
         },
         {
           "slug": "fv_apartment_category",
           "label": "Apartment category",
-          "description": null,
+          "description": "Tiers anchored on finish quality, furnishing completeness, size and amenities — validate definitions with GX.",
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1372,35 +1190,91 @@
             "Below standard"
           ],
           "required": true,
-          "phase_id": "9a",
+          "phase_id": "8",
           "phase_label": "Unit identity"
         },
         {
           "slug": "fv_accessibility_unit_door_widths",
           "label": "Apartment + bathroom door clear widths",
-          "description": "Narrowest door width (cm) inside the apartment. Critical for wheelchair access.",
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9a",
-          "phase_label": "Unit identity"
-        }
-      ]
-    },
-    {
-      "id": "9b",
-      "label": "Unit capacity",
-      "questions": [
-        {
-          "slug": "fv_capacity_actual_setup",
-          "label": "Actual capacity / bed setup if mismatch",
           "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9b",
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        },
+        {
+          "slug": "fv_location_noise_level",
+          "label": "Noise heard with windows closed?",
+          "description": "Gate: noise source shows unless \"No\".",
+          "scope": "unit_category",
+          "type": "select",
+          "options": [
+            "No",
+            "Yes-not disturbing",
+            "Yes-occasionally",
+            "Yes-regularly"
+          ],
+          "required": true,
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        },
+        {
+          "slug": "fv_location_noise_source",
+          "label": "Noise source",
+          "description": null,
+          "scope": "unit_category",
+          "type": "select",
+          "options": [
+            "Street",
+            "Tram/train",
+            "Neighbors",
+            "Construction",
+            "Aircraft",
+            "Other"
+          ],
+          "required": false,
+          "phase_id": "8",
+          "phase_label": "Unit identity"
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "label": "Unit capacity",
+      "questions": [
+        {
+          "slug": "fv_capacity_base",
+          "label": "Base capacity (standard beds)",
+          "description": null,
+          "scope": "unit_category",
+          "type": "number",
+          "options": [],
+          "required": true,
+          "phase_id": "9",
+          "phase_label": "Unit capacity"
+        },
+        {
+          "slug": "fv_capacity_max",
+          "label": "Max capacity (incl. sofa beds/extra)",
+          "description": null,
+          "scope": "unit_category",
+          "type": "number",
+          "options": [],
+          "required": true,
+          "phase_id": "9",
+          "phase_label": "Unit capacity"
+        },
+        {
+          "slug": "fv_capacity_actual_setup",
+          "label": "Capacity / bed setup notes",
+          "description": null,
+          "scope": "unit_category",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "9",
           "phase_label": "Unit capacity"
         },
         {
@@ -1411,36 +1285,19 @@
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9b",
+          "phase_id": "9",
           "phase_label": "Unit capacity"
         }
       ]
     },
     {
-      "id": "9c",
-      "label": "Unit physical measurements",
-      "questions": [
-        {
-          "slug": "fv_ceiling_height_m",
-          "label": "Ceiling height (meters)",
-          "description": "Visual estimate; for curtains",
-          "scope": "unit_category",
-          "type": "number",
-          "options": [],
-          "required": true,
-          "phase_id": "9c",
-          "phase_label": "Unit physical measurements"
-        }
-      ]
-    },
-    {
-      "id": "9d",
-      "label": "Unit walkthrough (condition)",
+      "id": "10",
+      "label": "Unit condition & issues",
       "questions": [
         {
           "slug": "fv_furniture_status",
           "label": "Furnished to Arbio standard?",
-          "description": null,
+          "description": "Arbio standard: required furniture set (bed, seating, dining, storage), condition/quality, completeness vs the checklist — validate with GX.",
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1450,13 +1307,13 @@
             "No overhaul"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
           "slug": "fv_equipment_status",
           "label": "Equipment status",
-          "description": null,
+          "description": "Against the equipment checklist: kitchen equipment completeness, appliances working, essentials present.",
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1465,13 +1322,13 @@
             "Significant additions"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
           "slug": "fv_bathroom_condition",
           "label": "Bathroom condition",
-          "description": null,
+          "description": "What excellent means: cleanliness; fixtures working; sealing/grout intact; ventilation; no mold or leaks.",
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1481,225 +1338,52 @@
             "Needs renovation"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "fv_bathroom_issues",
-          "label": "Specific bathroom issues",
-          "description": null,
+          "slug": "fv_issues_found",
+          "label": "Any issues found in the unit?",
+          "description": "Gate for the unified issue log.",
           "scope": "unit_category",
-          "type": "select",
+          "type": "boolean",
           "options": [
-            "None",
-            "Silicon",
-            "Mold",
-            "Water leak",
-            "Shower door missing",
-            "Ventilation",
-            "Other"
+            "Yes",
+            "No"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "fv_maintenance_level",
-          "label": "Maintenance work needed?",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "None",
-            "Minor <500",
-            "Moderate 500-2000",
-            "Major 2000+"
-          ],
-          "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "furniture_issue.photo",
-          "label": "Furniture issue photo",
-          "description": null,
-          "scope": "unit_category",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "furniture_issue.type",
-          "label": "Furniture issue type",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Missing",
-            "Damaged",
-            "Worn",
-            "Wrong size",
-            "Other"
-          ],
-          "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "furniture_issue.description",
-          "label": "Furniture issue description",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "furniture_issue.cost_eur",
-          "label": "Estimated cost (EUR)",
-          "description": null,
-          "scope": "unit_category",
-          "type": "number",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "equipment_issue.photo",
-          "label": "Equipment issue photo",
-          "description": null,
-          "scope": "unit_category",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "equipment_issue.type",
-          "label": "Equipment issue type",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Missing",
-            "Broken",
-            "Outdated",
-            "Other"
-          ],
-          "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "equipment_issue.description",
-          "label": "Equipment issue description",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "equipment_issue.cost_eur",
-          "label": "Estimated cost (EUR)",
-          "description": null,
-          "scope": "unit_category",
-          "type": "number",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "maintenance_issue.photo",
-          "label": "Maintenance issue photo",
-          "description": null,
-          "scope": "unit_category",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "maintenance_issue.type",
-          "label": "Maintenance issue type",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Plumbing",
-            "Electrical",
-            "HVAC",
-            "Structural",
-            "Other"
-          ],
-          "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "maintenance_issue.description",
-          "label": "Maintenance issue description",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "maintenance_issue.cost_eur",
-          "label": "Estimated cost (EUR)",
-          "description": null,
-          "scope": "unit_category",
-          "type": "number",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "finding_item_name",
-          "label": "Item / issue (clear name)",
-          "description": null,
+          "slug": "issue_name",
+          "label": "Issue / item name",
+          "description": "Repeat the block per issue.",
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_category",
-          "label": "Category",
+          "slug": "issue_type",
+          "label": "Issue type",
           "description": null,
           "scope": "unit_category",
           "type": "select",
           "options": [
             "Furniture",
-            "Appliance",
             "Equipment",
-            "Bathroom",
-            "Structural/Building",
-            "Consumable",
+            "Maintenance",
             "Other"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_location",
+          "slug": "issue_location",
           "label": "Location in unit",
           "description": null,
           "scope": "unit_category",
@@ -1715,49 +1399,49 @@
             "Other"
           ],
           "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_resolution",
+          "slug": "issue_resolution",
           "label": "Resolution",
           "description": null,
           "scope": "unit_category",
           "type": "select",
           "options": [
-            "Buy new (add)",
+            "Buy",
+            "Fix",
             "Replace",
-            "Repair",
-            "Deep clean"
+            "Monitor"
           ],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_quantity",
+          "slug": "issue_quantity",
           "label": "Quantity",
           "description": null,
           "scope": "unit_category",
           "type": "number",
           "options": [],
           "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_cost_estimate_eur",
+          "slug": "issue_cost_estimate_eur",
           "label": "Cost estimate (€)",
           "description": null,
           "scope": "unit_category",
           "type": "number",
           "options": [],
-          "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "required": false,
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_urgency",
+          "slug": "issue_urgency",
           "label": "Urgency",
           "description": null,
           "scope": "unit_category",
@@ -1767,52 +1451,66 @@
             "Nice-to-have"
           ],
           "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
         },
         {
-          "slug": "finding_notes",
-          "label": "Notes",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        },
-        {
-          "slug": "finding_media",
-          "label": "Photo / video",
+          "slug": "issue_media",
+          "label": "Photo / video of issue",
           "description": null,
           "scope": "unit_category",
           "type": "file",
           "options": [],
           "required": true,
-          "phase_id": "9d",
-          "phase_label": "Unit walkthrough (condition)"
-        }
-      ]
-    },
-    {
-      "id": "9e",
-      "label": "Unit appliances & amenities (repeater)",
-      "questions": [
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
+        },
         {
-          "slug": "appliance.name",
-          "label": "Item name",
-          "description": "Name of the appliance/amenity (e.g. 'Washing machine'). Pre-set if the item came from the starter list; editable.",
+          "slug": "issue_notes",
+          "label": "Issue notes",
+          "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "10",
+          "phase_label": "Unit condition & issues"
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "label": "Unit appliances & amenities",
+      "questions": [
+        {
+          "slug": "fv_items_to_log",
+          "label": "Any appliances/amenities to log?",
+          "description": "Gate for the item log (separate from the issue log).",
+          "scope": "unit_category",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": false,
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.kind",
-          "label": "Item kind (discriminator)",
-          "description": "Discriminator: Appliance | Equipment | Amenity. Usually pre-set per starter item (most starter items = Appliance).",
+          "slug": "item_name",
+          "label": "Item name",
+          "description": "Repeat per item in the unit.",
+          "scope": "unit_category",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
+        },
+        {
+          "slug": "item_kind",
+          "label": "Item kind",
+          "description": null,
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1821,46 +1519,46 @@
             "Amenity"
           ],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.brand",
+          "slug": "item_brand",
           "label": "Brand / manufacturer",
-          "description": "Free text. Blank unless visitor records it.",
+          "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.location",
+          "slug": "item_location",
           "label": "Location in unit",
-          "description": "Where the item is (e.g. kitchen, bathroom, hallway closet).",
+          "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.instructions",
+          "slug": "item_instructions",
           "label": "Operation notes / how to use",
-          "description": "Free text or short notes. Goes to instructions[] or notes on PMS side.",
+          "description": null,
           "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.availabilityType",
+          "slug": "item_availability_type",
           "label": "Availability type",
-          "description": "How the item is provided to the guest.",
+          "description": null,
           "scope": "unit_category",
           "type": "select",
           "options": [
@@ -1870,39 +1568,74 @@
             "Fixed"
           ],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         },
         {
-          "slug": "appliance.video",
+          "slug": "item_video",
           "label": "How-to-use video",
-          "description": "Upload a short video of how the appliance works (replaces the previous Y/N video-needed flag).",
+          "description": null,
           "scope": "unit_category",
           "type": "file",
           "options": [],
           "required": false,
-          "phase_id": "9e",
-          "phase_label": "Unit appliances & amenities (repeater)"
+          "phase_id": "11",
+          "phase_label": "Unit appliances & amenities"
         }
       ]
     },
     {
-      "id": "9f",
+      "id": "12",
       "label": "Unit safety equipment",
       "questions": [
         {
-          "slug": "fv_fire_extinguisher_present",
-          "label": "Fire extinguisher present in unit?",
-          "description": null,
+          "slug": "fv_unit_fusebox_present",
+          "label": "Is there a fuse box in the unit?",
+          "description": "Gate (unit-level), mirrors the building question.",
           "scope": "unit_category",
-          "type": "select",
+          "type": "boolean",
           "options": [
             "Yes",
-            "No",
-            "Common area only"
+            "No"
           ],
           "required": true,
-          "phase_id": "9f",
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_unit_fusebox_location",
+          "label": "Unit fuse box location",
+          "description": null,
+          "scope": "unit_category",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_unit_fusebox_reset_instructions",
+          "label": "Unit fuse box reset instructions",
+          "description": null,
+          "scope": "unit_category",
+          "type": "text",
+          "options": [],
+          "required": false,
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_fire_extinguisher_present",
+          "label": "Fire extinguisher present in unit?",
+          "description": "Gate: when \"No\", extinguisher sub-questions collapse.",
+          "scope": "unit_category",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "12",
           "phase_label": "Unit safety equipment"
         },
         {
@@ -1913,7 +1646,7 @@
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9f",
+          "phase_id": "12",
           "phase_label": "Unit safety equipment"
         },
         {
@@ -1927,60 +1660,14 @@
             "No",
             "Expired"
           ],
-          "required": true,
-          "phase_id": "9f",
+          "required": false,
+          "phase_id": "12",
           "phase_label": "Unit safety equipment"
         },
         {
           "slug": "fv_smoke_detector_present",
           "label": "Smoke detector(s) present?",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "All rooms",
-            "Bedrooms only",
-            "Kitchen/hallway only",
-            "No"
-          ],
-          "required": true,
-          "phase_id": "9f",
-          "phase_label": "Unit safety equipment"
-        },
-        {
-          "slug": "fv_smoke_detector_working",
-          "label": "Smoke detector functioning (test)",
-          "description": "Press test button",
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No",
-            "Could not test"
-          ],
-          "required": true,
-          "phase_id": "9f",
-          "phase_label": "Unit safety equipment"
-        },
-        {
-          "slug": "fv_co_detector_present",
-          "label": "Carbon monoxide detector present?",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No",
-            "N/A no gas"
-          ],
-          "required": true,
-          "phase_id": "9f",
-          "phase_label": "Unit safety equipment"
-        },
-        {
-          "slug": "fv_first_aid_present",
-          "label": "First-aid kit present?",
-          "description": null,
+          "description": "Gate: when \"No\", smoke-detector sub-questions collapse.",
           "scope": "unit_category",
           "type": "boolean",
           "options": [
@@ -1988,7 +1675,65 @@
             "No"
           ],
           "required": true,
-          "phase_id": "9f",
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_smoke_detector_working",
+          "label": "Smoke detector functioning (test)",
+          "description": "Press the test button until it beeps so results are consistent.",
+          "scope": "unit_category",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No",
+            "Could not test"
+          ],
+          "required": false,
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_co_detector_present",
+          "label": "Carbon monoxide detector present?",
+          "description": "Gate: when \"No\", CO-detector sub-questions collapse.",
+          "scope": "unit_category",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_co_detector_working",
+          "label": "Carbon monoxide detector functioning (test)",
+          "description": "Use the test button; confirm the alarm sounds.",
+          "scope": "unit_category",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No",
+            "Could not test"
+          ],
+          "required": false,
+          "phase_id": "12",
+          "phase_label": "Unit safety equipment"
+        },
+        {
+          "slug": "fv_first_aid_present",
+          "label": "First-aid kit present?",
+          "description": "Gate: when \"No\", first-aid sub-questions collapse.",
+          "scope": "unit_category",
+          "type": "boolean",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "required": true,
+          "phase_id": "12",
           "phase_label": "Unit safety equipment"
         },
         {
@@ -1999,63 +1744,15 @@
           "type": "text",
           "options": [],
           "required": false,
-          "phase_id": "9f",
+          "phase_id": "12",
           "phase_label": "Unit safety equipment"
         }
       ]
     },
     {
-      "id": "9g",
+      "id": "13",
       "label": "Unit amenities & details",
       "questions": [
-        {
-          "slug": "consumable.name",
-          "label": "Consumable name",
-          "description": "Auto-populated from picker (Welle 4) but editable.",
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": true,
-          "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
-        },
-        {
-          "slug": "consumable.meets_standard",
-          "label": "Meets Arbio standard?",
-          "description": null,
-          "scope": "unit_category",
-          "type": "select",
-          "options": [
-            "Yes",
-            "Needs additions",
-            "N/A"
-          ],
-          "required": false,
-          "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
-        },
-        {
-          "slug": "consumable.notes",
-          "label": "Notes",
-          "description": null,
-          "scope": "unit_category",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
-        },
-        {
-          "slug": "consumable.photo",
-          "label": "Consumable photo",
-          "description": null,
-          "scope": "unit_category",
-          "type": "file",
-          "options": [],
-          "required": false,
-          "phase_id": "9g",
-          "phase_label": "Unit amenities & details"
-        },
         {
           "slug": "fv_blackout_curtains",
           "label": "Blackout curtains/blinds",
@@ -2068,13 +1765,24 @@
             "No"
           ],
           "required": true,
-          "phase_id": "9g",
+          "phase_id": "13",
+          "phase_label": "Unit amenities & details"
+        },
+        {
+          "slug": "fv_ceiling_height_m",
+          "label": "Ceiling height (meters)",
+          "description": "Kept where relevant to curtain/blind measurement.",
+          "scope": "unit_category",
+          "type": "number",
+          "options": [],
+          "required": false,
+          "phase_id": "13",
           "phase_label": "Unit amenities & details"
         }
       ]
     },
     {
-      "id": "9h",
+      "id": "14",
       "label": "Unit photos & videos",
       "questions": [
         {
@@ -2085,7 +1793,7 @@
           "type": "file",
           "options": [],
           "required": true,
-          "phase_id": "9h",
+          "phase_id": "14",
           "phase_label": "Unit photos & videos"
         },
         {
@@ -2096,84 +1804,42 @@
           "type": "file",
           "options": [],
           "required": true,
-          "phase_id": "9h",
-          "phase_label": "Unit photos & videos"
-        },
-        {
-          "slug": "fv_photo_window_ceiling",
-          "label": "Window/ceiling photos for curtains",
-          "description": null,
-          "scope": "unit_category",
-          "type": "file",
-          "options": [],
-          "required": true,
-          "phase_id": "9h",
+          "phase_id": "14",
           "phase_label": "Unit photos & videos"
         },
         {
           "slug": "fv_photo_general_apartment",
           "label": "General apartment photos",
-          "description": "Working photos, not listing",
+          "description": null,
           "scope": "unit_category",
           "type": "file",
           "options": [],
           "required": true,
-          "phase_id": "9h",
+          "phase_id": "14",
           "phase_label": "Unit photos & videos"
         },
         {
-          "slug": "fv_window_photos_attached",
-          "label": "Window photos for measurement attached?",
-          "description": "Photos for curtain ordering",
-          "scope": "unit_category",
-          "type": "boolean",
-          "options": [
-            "Yes",
-            "No"
-          ],
-          "required": true,
-          "phase_id": "9h",
-          "phase_label": "Unit photos & videos"
-        }
-      ]
-    },
-    {
-      "id": "10",
-      "label": "Check-out arrangements",
-      "questions": [
-        {
-          "slug": "fv_checkout_step_name",
-          "label": "Check-out step name",
-          "description": "One entry per property-specific check-out step. Skip the block if none.",
-          "scope": "location",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "10",
-          "phase_label": "Check-out arrangements"
-        },
-        {
-          "slug": "fv_checkout_step_notes",
-          "label": "Check-out step notes",
+          "slug": "fv_photo_window_ceiling",
+          "label": "Window photos for measurement",
           "description": null,
-          "scope": "location",
-          "type": "text",
+          "scope": "unit_category",
+          "type": "file",
           "options": [],
           "required": false,
-          "phase_id": "10",
-          "phase_label": "Check-out arrangements"
+          "phase_id": "14",
+          "phase_label": "Unit photos & videos"
         }
       ]
     },
     {
-      "id": "11",
+      "id": "15",
       "label": "Final assessment / readiness",
       "questions": [
         {
           "slug": "fv_readiness_overall",
           "label": "Overall readiness for go-live",
-          "description": "Synthesizes everything observed",
-          "scope": "deal",
+          "description": "Ready = no open issues; Conditional = minor issues with owner actions; Not ready = blocking issues open.",
+          "scope": "unit_category",
           "type": "select",
           "options": [
             "Ready",
@@ -2181,73 +1847,25 @@
             "Not ready"
           ],
           "required": true,
-          "phase_id": "11",
+          "phase_id": "15",
           "phase_label": "Final assessment / readiness"
         },
         {
-          "slug": "fv_readiness_go_live_recommendation",
-          "label": "Recommended go-live",
-          "description": null,
-          "scope": "deal",
-          "type": "select",
-          "options": [
-            "Go on planned date",
-            "Delay",
-            "Cannot recommend yet (major blockers)"
-          ],
+          "slug": "fv_readiness_host_start_date",
+          "label": "Recommended host-start date",
+          "description": "The host-start date is set from this assessment (no predefined go-live date in the new process).",
+          "scope": "unit_category",
+          "type": "date",
+          "options": [],
           "required": true,
-          "phase_id": "11",
-          "phase_label": "Final assessment / readiness"
-        },
-        {
-          "slug": "fv_readiness_go_live_delay_weeks",
-          "label": "How many weeks delay?",
-          "description": "Only if Delay selected",
-          "scope": "deal",
-          "type": "number",
-          "options": [],
-          "required": false,
-          "phase_id": "11",
-          "phase_label": "Final assessment / readiness"
-        },
-        {
-          "slug": "fv_readiness_blocking_issues",
-          "label": "Blocking issues",
-          "description": "Required if Conditional/Not ready",
-          "scope": "deal",
-          "type": "select",
-          "options": [
-            "Major maintenance",
-            "Mold/damage",
-            "Fire safety",
-            "Equipment",
-            "Cleaning",
-            "Internet",
-            "Lock",
-            "Furniture",
-            "Permits",
-            "Other"
-          ],
-          "required": false,
-          "phase_id": "11",
-          "phase_label": "Final assessment / readiness"
-        },
-        {
-          "slug": "fv_readiness_blocking_details",
-          "label": "Blocking issue details",
-          "description": "Specifics + cost/time estimates",
-          "scope": "deal",
-          "type": "text",
-          "options": [],
-          "required": false,
-          "phase_id": "11",
+          "phase_id": "15",
           "phase_label": "Final assessment / readiness"
         },
         {
           "slug": "fv_readiness_health_score",
           "label": "Health score (1-10)",
-          "description": "Gut-feel rating",
-          "scope": "deal",
+          "description": "Composite of condition, completeness, and open-issue count/severity. 10 = move-in ready, 1 = major work needed.",
+          "scope": "unit_category",
           "type": "select",
           "options": [
             "1",
@@ -2262,29 +1880,29 @@
             "10"
           ],
           "required": true,
-          "phase_id": "11",
+          "phase_id": "15",
           "phase_label": "Final assessment / readiness"
         },
         {
           "slug": "fv_readiness_recommendation_summary",
-          "label": "Recommendation summary (paragraph)",
+          "label": "Summary recommendation",
           "description": null,
-          "scope": "deal",
+          "scope": "unit_category",
           "type": "text",
           "options": [],
-          "required": true,
-          "phase_id": "11",
+          "required": false,
+          "phase_id": "15",
           "phase_label": "Final assessment / readiness"
         },
         {
           "slug": "fv_general_comments",
           "label": "General comments / flags",
           "description": null,
-          "scope": "location",
+          "scope": "unit_category",
           "type": "text",
           "options": [],
           "required": true,
-          "phase_id": "11",
+          "phase_id": "15",
           "phase_label": "Final assessment / readiness"
         }
       ]
