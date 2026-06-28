@@ -65,8 +65,6 @@ export function UnitSurvey({
   // Keys of fields just populated by a voice fill — drives the transient
   // "✦ from voice" highlight; cleared after a short delay.
   const [justFilledKeys, setJustFilledKeys] = useState<Set<string>>(new Set());
-  // Answer key the survey should scroll to after a voice fill (see mergeAiRows).
-  const [scrollTargetKey, setScrollTargetKey] = useState<string | null>(null);
   // WS-F media anchoring: pull photo/video file-questions out of their own
   // phase ("Property documentation", "Unit photos & videos") and inline them
   // under their related data question. We build the map across the whole
@@ -378,11 +376,10 @@ export function UnitSurvey({
       return next;
     });
     setJustFilledKeys(new Set(keys));
-    // Make the fill obvious: scroll the first filled SINGLE field into view
-    // (repeater items append below the prompt the inspector is already looking
-    // at). Falls back to the first row when the clip only filled a repeater.
-    const firstSingle = rows.find((r) => r.step_index == null) ?? rows[0];
-    setScrollTargetKey(rowKey(firstSingle));
+    // Deliberately NO auto-scroll: the inspector keeps talking through the
+    // section and reviews/accepts the suggestions further down whenever they
+    // choose. The fill is signalled in place by the prompt's "Pre-filled: …"
+    // hint plus the transient "✦ from voice" highlight on each field.
     setTimeout(() => setJustFilledKeys(new Set()), 2500);
   };
 
@@ -399,17 +396,6 @@ export function UnitSurvey({
     onRowsWritten: mergeAiRows,
   });
 
-  // After a voice fill, scroll the first filled field into view once it (and any
-  // gate-revealed dependents) have rendered.
-  useEffect(() => {
-    if (!scrollTargetKey) return;
-    const id = requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-answer-key="${CSS.escape(scrollTargetKey)}"]`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setScrollTargetKey(null);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [scrollTargetKey, answers]);
 
   const isJustFilled = (areaKey: string, slug: string, stepIndex: number | null) => {
     const key =
@@ -511,12 +497,20 @@ export function UnitSurvey({
       if (anchor && !promptByAnchorSlug.has(anchor)) promptByAnchorSlug.set(anchor, p);
     }
   }
+  const labelBySlug = new Map(phase.questions.map((q) => [q.slug, q.label]));
+  const labelFor = (slug: string) => labelBySlug.get(slug) ?? slug;
   const voiceCardFor = (slugs: string[]) => {
     for (const s of slugs) {
       const p = promptByAnchorSlug.get(s);
       if (p) {
         return (
-          <VoicePromptCard key={`vp-${p.id}`} prompt={p} phaseId={phase.id} fill={voiceFill} />
+          <VoicePromptCard
+            key={`vp-${p.id}`}
+            prompt={p}
+            phaseId={phase.id}
+            fill={voiceFill}
+            labelFor={labelFor}
+          />
         );
       }
     }
@@ -691,7 +685,7 @@ export function UnitSurvey({
               return (
                 <Fragment key={key}>
                   {voiceCardFor([q.slug])}
-                  <div data-answer-key={key} className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <RepeaterStub
                       question={q}
@@ -765,7 +759,7 @@ export function UnitSurvey({
             return (
               <Fragment key={key}>
                 {voiceCardFor([q.slug])}
-                <div data-answer-key={key} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3">
                 <QuestionRow
                   question={q}
                   inspectionId={inspectionId}

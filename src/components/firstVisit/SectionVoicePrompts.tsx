@@ -4,13 +4,22 @@ import type { SectionVoiceFill, VoiceFillSummary } from '@/lib/firstVisit/useSec
 import type { SectionPrompt } from '@/data/section-voice-prompts';
 import { VOICE_FILL_ENABLED } from '@/lib/firstVisit/featureFlags';
 
-function summaryLine(s: VoiceFillSummary): string {
+// Build the non-intrusive hint shown at the prompt after a clip is processed.
+// Names the actual fields filled ("Pre-filled: Room size, View comments") so the
+// inspector can keep talking and review/Accept further down whenever they like —
+// the survey deliberately does NOT scroll them away from the prompt.
+function summaryLine(s: VoiceFillSummary, labelFor: (slug: string) => string): string {
   const filled = s.singlesWritten + s.itemsWritten;
   if (filled === 0) return 'Nothing to add from that clip — try again or fill below.';
   const parts: string[] = [];
-  if (s.singlesWritten) parts.push(`${s.singlesWritten} field${s.singlesWritten > 1 ? 's' : ''}`);
-  if (s.itemsWritten) parts.push(`${s.itemsWritten} item${s.itemsWritten > 1 ? 's' : ''}`);
-  return `Filled ${parts.join(' + ')} — review the suggestions below.`;
+  const names = s.filledSlugs.map(labelFor).filter(Boolean);
+  if (names.length) parts.push(`Pre-filled: ${names.join(', ')}`);
+  if (s.itemsWritten) parts.push(`${s.itemsWritten} item${s.itemsWritten > 1 ? 's' : ''} added`);
+  // Fallback when single fields were written but no labels resolved.
+  if (parts.length === 0 && s.singlesWritten) {
+    parts.push(`${s.singlesWritten} field${s.singlesWritten > 1 ? 's' : ''} pre-filled`);
+  }
+  return `✦ ${parts.join(' · ')} — review & accept below.`;
 }
 
 // A single "talk about this" voice prompt, rendered INLINE directly above the
@@ -24,10 +33,13 @@ export function VoicePromptCard({
   prompt,
   phaseId,
   fill,
+  labelFor,
 }: {
   prompt: SectionPrompt;
   phaseId: string;
   fill: SectionVoiceFill;
+  /** Resolve a field slug to its human label for the "Pre-filled: …" hint. */
+  labelFor: (slug: string) => string;
 }) {
   if (!VOICE_FILL_ENABLED) return null;
 
@@ -62,7 +74,7 @@ export function VoicePromptCard({
       )}
       {fill.summary?.promptId === prompt.id && (
         <div className="flex items-center gap-3">
-          <p className="text-xs text-indigo-700">{summaryLine(fill.summary)}</p>
+          <p className="text-xs text-indigo-700">{summaryLine(fill.summary, labelFor)}</p>
           {fill.canAcceptAll && (
             <button
               type="button"
