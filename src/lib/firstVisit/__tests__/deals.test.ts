@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../hubSupabase', () => ({ getHubSupabase: vi.fn() }));
-vi.mock('../hubSupabaseAdmin', () => ({ getHubServerClient: vi.fn() }));
+vi.mock('../hubSupabaseAdmin', () => ({
+  getHubServerClient: vi.fn(),
+  // listFirstVisitDeals now prefers the cookie-aware request client; in unit
+  // tests there's no request scope, so it resolves to null and falls back.
+  getHubRequestClient: vi.fn().mockResolvedValue(null),
+}));
 
 import { listFirstVisitDeals } from '../deals';
 import { getHubServerClient } from '../hubSupabaseAdmin';

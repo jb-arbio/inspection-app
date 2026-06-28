@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
-import { getHubServerClient } from '@/lib/firstVisit/hubSupabaseAdmin';
+import { getHubServerClient, getHubRequestClient } from '@/lib/firstVisit/hubSupabaseAdmin';
 
 // On-site creation of a hub unit. Inserts an onboarding.unit_categories row
 // under the given location and returns it.
@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ dealId: string; locationId: string }> },
 ) {
   const { locationId } = await params;
-  const supabase = getHubServerClient(getHubSupabase());
+  const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
   if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
 
   const body = await req.json().catch(() => ({}));

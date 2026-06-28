@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getHubSupabase } from '@/lib/firstVisit/hubSupabase';
-import { getHubServerClient } from '@/lib/firstVisit/hubSupabaseAdmin';
+import { getHubServerClient, getHubRequestClient } from '@/lib/firstVisit/hubSupabaseAdmin';
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ dealId: string }> },
 ) {
   const { dealId } = await params;
-  const supabase = getHubServerClient(getHubSupabase());
+  const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
   if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
 
   const { data: deal } = await supabase
