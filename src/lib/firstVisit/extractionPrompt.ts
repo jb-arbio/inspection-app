@@ -24,6 +24,10 @@ export const EXTRACT_SYSTEM_PROMPT = [
   '  stated explicitly, lower when inferred. null fields get confidence null.',
   '- The transcript may be German, English, or mixed. Understand all; output',
   '  enum values exactly as written in the catalogue.',
+  '- Also return "summary": a concise, factual 2-4 sentence qualitative recap,',
+  '  in English, of what the inspector said about this section. Summarise only',
+  '  what was actually said — never fabricate. If the clip is empty or has no',
+  '  relevant content, return null.',
   '- Return only the structured object. No commentary.',
 ].join('\n');
 

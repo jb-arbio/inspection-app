@@ -31,7 +31,7 @@ import { requiredVisible } from '@/lib/firstVisit/progress';
 import { track } from '@/lib/firstVisit/analytics';
 import { VoicePromptCard } from '@/components/firstVisit/SectionVoicePrompts';
 import { useSectionVoiceFill } from '@/lib/firstVisit/useSectionVoiceFill';
-import { promptsForPhase } from '@/data/section-voice-prompts';
+import { promptsForPhase, voiceSummarySlug } from '@/data/section-voice-prompts';
 import { isAiSnapshot, unwrapAiSnapshot } from '@/lib/firstVisit/aiFill';
 
 // A target the survey is rendering for. The deal-scoped visit root is a
@@ -499,18 +499,52 @@ export function UnitSurvey({
   }
   const labelBySlug = new Map(phase.questions.map((q) => [q.slug, q.label]));
   const labelFor = (slug: string) => labelBySlug.get(slug) ?? slug;
+  // Synthesize a text "question" for a prompt's qualitative voice summary so it
+  // renders through the normal QuestionRow text path (caret-safe editing +
+  // external-sync when voice writes it). slug = the synthetic summary key.
+  const summaryQuestionFor = (promptId: string): FirstVisitQuestion => ({
+    slug: voiceSummarySlug(promptId),
+    label: 'Summary (from voice)',
+    description: 'Editable recap captured from your voice clip — correct anything as needed.',
+    scope,
+    mode: 'observe',
+    type: 'text',
+    options: [],
+    required: false,
+    repeater: false,
+    pms_target: null,
+    status: 'existing',
+    verdict: null,
+    notes: null,
+    phase_id: phase.id,
+    phase_label: phase.label,
+  });
   const voiceCardFor = (slugs: string[]) => {
     for (const s of slugs) {
       const p = promptByAnchorSlug.get(s);
       if (p) {
+        const sq = summaryQuestionFor(p.id);
+        const summaryAnswer = answers[`${target.id}::${phase.id}::${sq.slug}`];
+        const hasSummary =
+          summaryAnswer?.value != null && String(summaryAnswer.value).trim() !== '';
         return (
-          <VoicePromptCard
-            key={`vp-${p.id}`}
-            prompt={p}
-            phaseId={phase.id}
-            fill={voiceFill}
-            labelFor={labelFor}
-          />
+          <Fragment key={`vp-${p.id}`}>
+            <VoicePromptCard prompt={p} phaseId={phase.id} fill={voiceFill} labelFor={labelFor} />
+            {hasSummary && (
+              <QuestionRow
+                question={sq}
+                inspectionId={inspectionId}
+                targetId={target.id}
+                areaKey={phase.id}
+                stepIndex={null}
+                hubValue={undefined}
+                justFilled={isJustFilled(phase.id, sq.slug, null)}
+                answers={answers}
+                onChange={onChange}
+                setNotes={setNotes}
+              />
+            )}
+          </Fragment>
         );
       }
     }

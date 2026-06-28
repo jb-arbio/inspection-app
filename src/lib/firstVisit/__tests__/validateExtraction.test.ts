@@ -70,4 +70,26 @@ describe('validateExtraction', () => {
     expect(r.items).toHaveLength(0);
     expect(r.warnings.some((w) => w.includes('unknown group'))).toBe(true);
   });
+
+  it('keeps a trimmed summary string', () => {
+    const r = validateExtraction(
+      { singles: {}, items: [], summary: '  Quiet street, well kept.  ' },
+      TARGET,
+    );
+    expect(r.summary).toBe('Quiet street, well kept.');
+  });
+
+  it('nulls a missing, empty, or non-string summary', () => {
+    expect(validateExtraction({ singles: {}, items: [] }, TARGET).summary).toBeNull();
+    expect(validateExtraction({ singles: {}, items: [], summary: '   ' }, TARGET).summary).toBeNull();
+    expect(validateExtraction({ singles: {}, items: [], summary: 42 }, TARGET).summary).toBeNull();
+  });
+
+  it('caps an over-long summary at 1500 chars', () => {
+    const r = validateExtraction(
+      { singles: {}, items: [], summary: 'x'.repeat(5000) },
+      TARGET,
+    );
+    expect(r.summary).toHaveLength(1500);
+  });
 });

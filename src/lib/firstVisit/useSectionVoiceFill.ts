@@ -56,6 +56,8 @@ export function useSectionVoiceFill(opts: Options) {
   const mounted = useRef(true);
   const areaKeyRef = useRef('');
   const slugsRef = useRef<string[]>([]);
+  const summarySlugRef = useRef<string | undefined>(undefined);
+  const qualitativeOnlyRef = useRef(false);
   const lastRows = useRef<LocalAnswer[]>([]);
 
   useEffect(() => () => { mounted.current = false; }, []);
@@ -76,7 +78,13 @@ export function useSectionVoiceFill(opts: Options) {
   useEffect(() => clearTimer, [clearTimer]);
 
   const onStart = useCallback(
-    async (promptId: string, areaKey: string, targetSlugs: string[]) => {
+    async (
+      promptId: string,
+      areaKey: string,
+      targetSlugs: string[],
+      summarySlug?: string,
+      qualitativeOnly = false,
+    ) => {
       if (status !== 'idle') return;
       if (!navigator.onLine) return;
       setError(false);
@@ -86,6 +94,8 @@ export function useSectionVoiceFill(opts: Options) {
       lastRows.current = [];
       areaKeyRef.current = areaKey;
       slugsRef.current = targetSlugs;
+      summarySlugRef.current = summarySlug;
+      qualitativeOnlyRef.current = qualitativeOnly;
       try {
         await start();
         captions.start();
@@ -127,6 +137,8 @@ export function useSectionVoiceFill(opts: Options) {
             extraction,
             answers: opts.getAnswers(),
             groupSlugsByGroup,
+            summarySlug: summarySlugRef.current,
+            writeStructured: !qualitativeOnlyRef.current,
           });
           if (mounted.current) {
             lastRows.current = result.writtenRows;

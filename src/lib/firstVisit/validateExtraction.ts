@@ -10,8 +10,22 @@ export type AiExtractedItem = { group_id: string; fields: Record<string, AiField
 export type ValidatedExtraction = {
   singles: Record<string, AiField>;
   items: AiExtractedItem[];
+  // Qualitative recap of the clip, stored as an editable per-section answer in
+  // addition to the structured fields. null when the model had nothing to say.
+  summary: string | null;
   warnings: string[];
 };
+
+// Max characters kept for a stored summary — a guard against a runaway model
+// response. ~1500 chars is comfortably more than a 2-4 sentence recap.
+const MAX_SUMMARY_LEN = 1500;
+
+function normalizeSummary(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s) return null;
+  return s.length > MAX_SUMMARY_LEN ? s.slice(0, MAX_SUMMARY_LEN) : s;
+}
 
 function clampConfidence(c: unknown): number | null {
   if (typeof c !== 'number' || !Number.isFinite(c)) return null;
@@ -115,5 +129,5 @@ export function validateExtraction(
     items.push({ group_id: group, fields });
   }
 
-  return { singles, items, warnings };
+  return { singles, items, summary: normalizeSummary(root.summary), warnings };
 }
