@@ -11,6 +11,27 @@ export async function enqueue(kind: OutboxJob['kind'], payload: unknown): Promis
   });
 }
 
+// Re-ensure the hub has the parent inspection row for an open survey. The
+// inspection is only enqueued once, when first created (DealPicker) — so if that
+// single inspection_upsert never landed (offline / the auth-broken window), the
+// inspection has no hub row and every child target/answer FK-fails forever with
+// no recovery. Calling this on survey open re-queues an idempotent upsert so an
+// orphaned parent self-heals on the next sync. Skips submitted inspections (to
+// avoid clobbering their server-side submit state) and de-dupes against any
+// inspection_upsert already pending in the outbox.
+export async function ensureInspectionQueued(inspectionId: string): Promise<void> {
+  const insp = await localDb.inspections.get(inspectionId);
+  if (!insp || insp.status === 'submitted') return;
+  const jobs = await localDb.outbox.toArray();
+  const alreadyQueued = jobs.some(
+    (j) =>
+      j.kind === 'inspection_upsert' &&
+      (j.payload as { id?: string } | null)?.id === inspectionId,
+  );
+  if (alreadyQueued) return;
+  await enqueue('inspection_upsert', insp);
+}
+
 export async function drainOutbox(handlers: JobHandlers): Promise<void> {
   const jobs = await localDb.outbox.orderBy('created_at').toArray();
   for (const job of jobs) {
