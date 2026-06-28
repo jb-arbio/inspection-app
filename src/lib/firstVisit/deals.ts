@@ -1,5 +1,5 @@
 import { getHubSupabase } from './hubSupabase';
-import { getHubServerClient } from './hubSupabaseAdmin';
+import { getHubServerClient, getHubRequestClient } from './hubSupabaseAdmin';
 
 export type FirstVisitDeal = { id: string; name: string };
 
@@ -13,7 +13,7 @@ export type FirstVisitDeal = { id: string; name: string };
 // route sits behind auth middleware a server-to-self fetch can't satisfy).
 export async function listFirstVisitDeals(): Promise<FirstVisitDeal[]> {
   try {
-    const supabase = getHubServerClient(getHubSupabase());
+    const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
     if (!supabase) return [];
     const { data, error } = await supabase
       .from('deals')
