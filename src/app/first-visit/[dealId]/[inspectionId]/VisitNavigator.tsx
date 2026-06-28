@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { localDb, type LocalAnswer, type LocalTarget } from '@/lib/firstVisit/db';
-import { enqueue } from '@/lib/firstVisit/sync';
+import { enqueue, ensureInspectionQueued } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
 import { type HubSnapshot } from '@/lib/firstVisit/snapshot';
@@ -122,6 +122,14 @@ export default function VisitNavigator({
   const handlers = useMemo(() => createHandlers(), []);
   const { pending, syncNow, syncing } = useSyncEngine(handlers);
   const { phases: configPhases } = useSurveyConfig();
+
+  // Re-ensure the hub has this inspection's parent row. If its original
+  // inspection_upsert never landed (offline / the auth-broken window), every
+  // target/answer would FK-fail with no recovery; this lets an orphaned parent
+  // self-heal on the next sync.
+  useEffect(() => {
+    void ensureInspectionQueued(inspectionId);
+  }, [inspectionId]);
 
   const reloadTargets = useCallback(async () => {
     const rows = await localDb.targets

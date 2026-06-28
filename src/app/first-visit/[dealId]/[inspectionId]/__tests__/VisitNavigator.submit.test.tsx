@@ -10,7 +10,10 @@ vi.mock('@/lib/firstVisit/useSyncEngine', () => ({
   useSyncEngine: () => ({ pending: 0, syncing: false, syncNow: vi.fn().mockResolvedValue(undefined) }),
   useOnlineStatus: () => true,
 }));
-vi.mock('@/lib/firstVisit/sync', () => ({ enqueue: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/firstVisit/sync', () => ({
+  enqueue: vi.fn().mockResolvedValue(undefined),
+  ensureInspectionQueued: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/lib/firstVisit/analytics', () => ({ track: vi.fn() }));
 vi.mock('@/lib/firstVisit/export', () => ({ downloadInspectionZip: vi.fn() }));
 
