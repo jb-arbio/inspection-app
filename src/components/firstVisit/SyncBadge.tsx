@@ -1,35 +1,19 @@
 'use client';
 import { useOnlineStatus } from '@/lib/firstVisit/useSyncEngine';
 
-// A quiet, technical background signal — NOT a completion indicator. It tells
-// the inspector that local changes are being flushed to the hub's outbox; it
-// must never shout an alarming backlog number (the field report saw "~1,158
-// pending"). So it renders nothing unless a sync is actually in flight, and
-// frames the count as "changes" rather than a scary "pending" total. The
-// user-facing completion signal lives in the navigator header.
-export function SyncBadge({ pending, syncing }: { pending: number; syncing: boolean }) {
+// Quiet background signal. Syncing to the hub's outbox happens continuously and
+// the inspector never acts on it, so we deliberately DON'T render an in-flight
+// "Syncing…" badge — its changing width made the header buttons (Edit / Sync
+// now / Export) jump every time a sync started or finished. The only state
+// worth surfacing is being offline with unsynced work, which reassures the
+// inspector their data is safe on the device. It appears rarely and never shows
+// an alarming backlog number.
+export function SyncBadge({ pending }: { pending: number }) {
   const online = useOnlineStatus();
-
-  // Nothing in flight → say nothing.
-  if (!syncing) {
-    // Offline with un-synced work still deserves a gentle, non-alarming note.
-    if (!online && pending > 0) {
-      return (
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-          Offline — changes saved on device
-        </span>
-      );
-    }
-    return null;
-  }
-
-  const label =
-    pending > 0
-      ? `Syncing ${pending} change${pending === 1 ? '' : 's'}…`
-      : 'Syncing…';
+  if (online || pending <= 0) return null;
   return (
     <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-      {label}
+      Offline — changes saved on device
     </span>
   );
 }
