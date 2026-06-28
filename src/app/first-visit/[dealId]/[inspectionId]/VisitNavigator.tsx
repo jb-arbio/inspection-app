@@ -6,8 +6,8 @@ import { enqueue } from '@/lib/firstVisit/sync';
 import { useSyncEngine } from '@/lib/firstVisit/useSyncEngine';
 import { createHandlers } from '@/lib/firstVisit/handlers';
 import { type HubSnapshot } from '@/lib/firstVisit/snapshot';
-import { downloadInspectionZip } from '@/lib/firstVisit/export';
 import { SyncBadge } from '@/components/firstVisit/SyncBadge';
+import { ExportMenu } from '@/components/firstVisit/ExportMenu';
 import { EditSurveyButton } from '@/components/firstVisit/EditSurveyButton';
 import { ProgressRing } from '@/components/firstVisit/ProgressRing';
 import { track } from '@/lib/firstVisit/analytics';
@@ -515,7 +515,7 @@ export default function VisitNavigator({
           </div>
           <div className="flex shrink-0 items-center gap-2 text-xs">
             <EditSurveyButton />
-            <SyncBadge pending={pending} syncing={syncing} />
+            <SyncBadge pending={pending} />
             <button
               onClick={syncNow}
               disabled={syncing}
@@ -524,21 +524,7 @@ export default function VisitNavigator({
             >
               Sync now
             </button>
-            <button
-              onClick={() => downloadInspectionZip(inspectionId)}
-              tabIndex={-1}
-              className="rounded border border-gray-300 px-2 py-0.5"
-            >
-              Export
-            </button>
-            <a
-              href={`/api/first-visit/${inspectionId}/findings.csv`}
-              download
-              tabIndex={-1}
-              className="rounded border border-gray-300 px-2 py-0.5"
-            >
-              Findings CSV
-            </a>
+            <ExportMenu inspectionId={inspectionId} />
           </div>
         </div>
       </header>
