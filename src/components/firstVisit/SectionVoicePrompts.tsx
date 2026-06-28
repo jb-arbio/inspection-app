@@ -1,7 +1,7 @@
 'use client';
 import { VoiceDictationButton } from '@/components/firstVisit/VoiceDictationButton';
 import type { SectionVoiceFill, VoiceFillSummary } from '@/lib/firstVisit/useSectionVoiceFill';
-import type { SectionPrompt } from '@/data/section-voice-prompts';
+import { voiceSummarySlug, type SectionPrompt } from '@/data/section-voice-prompts';
 import { VOICE_FILL_ENABLED } from '@/lib/firstVisit/featureFlags';
 
 // Build the non-intrusive hint shown at the prompt after a clip is processed.
@@ -64,7 +64,15 @@ export function VoicePromptCard({
             elapsedMs={active ? fill.elapsedMs : 0}
             disabled={fill.status !== 'idle' && !active}
             transcribingLabel="Thinking…"
-            onStart={() => fill.onStart(prompt.id, phaseId, prompt.target_slugs)}
+            onStart={() =>
+              fill.onStart(
+                prompt.id,
+                phaseId,
+                prompt.target_slugs,
+                voiceSummarySlug(prompt.id),
+                prompt.qualitative_only ?? false,
+              )
+            }
             onStop={fill.onStop}
           />
         </div>

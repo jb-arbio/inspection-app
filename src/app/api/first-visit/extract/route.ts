@@ -18,7 +18,7 @@ const json = (body: unknown, status = 200) =>
 
 // Degrade gracefully: a model/parse failure returns empty (not 500) so the
 // client falls back to manual entry instead of hard-erroring mid-walkthrough.
-const empty = (warnings: string[]) => json({ singles: {}, items: [], warnings });
+const empty = (warnings: string[]) => json({ singles: {}, items: [], summary: null, warnings });
 
 export async function POST(req: Request): Promise<Response> {
   const ctx = await getHubRouteContext(getHubSupabase());

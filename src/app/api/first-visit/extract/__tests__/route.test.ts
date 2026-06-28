@@ -45,7 +45,7 @@ describe('POST /api/first-visit/extract', () => {
   it('returns empty (no model call) when transcript is blank', async () => {
     const res = await POST(makeRequest({ text: '   ', targetSlugs: ['fv_location_quality'] }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ singles: {}, items: [], warnings: ['empty transcript'] });
+    expect(await res.json()).toEqual({ singles: {}, items: [], summary: null, warnings: ['empty transcript'] });
     expect(chat).not.toHaveBeenCalled();
   });
 

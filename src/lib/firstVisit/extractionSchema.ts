@@ -140,10 +140,16 @@ export function buildExtractionSchema(
   const schema: JsonSchema = {
     type: 'object',
     additionalProperties: false,
-    required: ['singles', 'items'],
+    // strict mode requires every declared property to be listed in `required`;
+    // `summary` is nullable so the model may return null for an empty clip.
+    required: ['singles', 'items', 'summary'],
     properties: {
       singles: objectOf(singleSlugs, bySlug),
       items: { type: 'array', items: itemSchema },
+      // A concise qualitative recap of the clip, stored ALONGSIDE the structured
+      // fields (see validateExtraction / writeAiSuggestions). Rides this same
+      // gpt call — no extra request.
+      summary: { type: ['string', 'null'] },
     },
   };
 

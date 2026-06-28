@@ -71,6 +71,13 @@ type WriteArgs = {
   answers: Record<string, LocalAnswer>;
   /** group_id → ordered field slugs (from buildExtractionSchema). */
   groupSlugsByGroup: Record<string, string[]>;
+  /** Synthetic slug the prompt's qualitative summary is stored under. When set
+   *  and the extraction carries a summary, a single editable text row is written
+   *  (question_key = this, value = the summary prose). Omit to skip. */
+  summarySlug?: string;
+  /** When false, the structured singles/items are NOT written — only the summary
+   *  (for `qualitative_only` prompts). Defaults to true. */
+  writeStructured?: boolean;
 };
 
 export type AiFillResult = {
@@ -118,37 +125,64 @@ function buildRow(args: {
 // exactly like onChange.
 export async function writeAiSuggestions(args: WriteArgs): Promise<AiFillResult> {
   const { inspectionId, targetId, areaKey, scope, ctx, extraction, answers, groupSlugsByGroup } = args;
+  const writeStructured = args.writeStructured ?? true;
   const now = new Date().toISOString();
   const rows: LocalAnswer[] = [];
   let singlesWritten = 0;
+  let itemsWritten = 0;
 
-  // Singles — skip fields with no value, and don't clobber an already-answered field.
-  for (const [slug, field] of Object.entries(extraction.singles)) {
-    if (field.value == null) continue;
-    const existing = answers[singleKey(targetId, areaKey, slug)];
-    if (existing && (existing.value != null || existing.was_accepted_as_is)) continue;
-    rows.push(buildRow({ inspectionId, targetId, areaKey, scope, ctx, slug, field, stepIndex: null, existing, now }));
-    singlesWritten++;
+  if (writeStructured) {
+    // Singles — skip fields with no value, and don't clobber an already-answered field.
+    for (const [slug, field] of Object.entries(extraction.singles)) {
+      if (field.value == null) continue;
+      const existing = answers[singleKey(targetId, areaKey, slug)];
+      if (existing && (existing.value != null || existing.was_accepted_as_is)) continue;
+      rows.push(buildRow({ inspectionId, targetId, areaKey, scope, ctx, slug, field, stepIndex: null, existing, now }));
+      singlesWritten++;
+    }
+
+    // Repeater items — append each at a fresh step_index, per group.
+    const nextIndexByGroup: Record<string, number> = {};
+    for (const item of extraction.items) {
+      const groupSlugs = groupSlugsByGroup[item.group_id];
+      if (!groupSlugs) continue;
+      if (nextIndexByGroup[item.group_id] === undefined) {
+        nextIndexByGroup[item.group_id] = maxStepIndexForGroup(answers, groupSlugs, targetId, areaKey) + 1;
+      }
+      const step = nextIndexByGroup[item.group_id]++;
+      let wroteField = false;
+      for (const [slug, field] of Object.entries(item.fields)) {
+        if (field.value == null) continue;
+        const existing = answers[repeaterKey(targetId, areaKey, slug, step)];
+        rows.push(buildRow({ inspectionId, targetId, areaKey, scope, ctx, slug, field, stepIndex: step, existing, now }));
+        wroteField = true;
+      }
+      if (wroteField) itemsWritten++;
+    }
   }
 
-  // Repeater items — append each at a fresh step_index, per group.
-  const nextIndexByGroup: Record<string, number> = {};
-  let itemsWritten = 0;
-  for (const item of extraction.items) {
-    const groupSlugs = groupSlugsByGroup[item.group_id];
-    if (!groupSlugs) continue;
-    if (nextIndexByGroup[item.group_id] === undefined) {
-      nextIndexByGroup[item.group_id] = maxStepIndexForGroup(answers, groupSlugs, targetId, areaKey) + 1;
-    }
-    const step = nextIndexByGroup[item.group_id]++;
-    let wroteField = false;
-    for (const [slug, field] of Object.entries(item.fields)) {
-      if (field.value == null) continue;
-      const existing = answers[repeaterKey(targetId, areaKey, slug, step)];
-      rows.push(buildRow({ inspectionId, targetId, areaKey, scope, ctx, slug, field, stepIndex: step, existing, now }));
-      wroteField = true;
-    }
-    if (wroteField) itemsWritten++;
+  // Qualitative summary — a single editable text row written DIRECTLY to value
+  // (not the Accept-to-confirm channel; it's prose the inspector reviews/edits).
+  // Re-recording overwrites it (intentional redo), reusing the existing row id.
+  if (args.summarySlug && typeof extraction.summary === 'string' && extraction.summary) {
+    const existing = answers[singleKey(targetId, areaKey, args.summarySlug)];
+    rows.push({
+      id: existing?.id ?? crypto.randomUUID(),
+      inspection_id: inspectionId,
+      target_id: targetId,
+      scope,
+      location_id: ctx.location_id,
+      unit_category_id: ctx.unit_category_id,
+      question_key: args.summarySlug,
+      area_key: areaKey,
+      step_index: null,
+      value: extraction.summary,
+      data_point_slug: args.summarySlug,
+      was_prefilled: true,
+      was_accepted_as_is: false,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+    });
   }
 
   if (rows.length) {

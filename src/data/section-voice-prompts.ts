@@ -26,6 +26,11 @@ export type SectionPrompt = {
   label: string;
   /** Field slugs this prompt's clip is allowed to fill. */
   target_slugs: string[];
+  /** When true, the clip fills ONLY the qualitative summary — the structured
+   *  target fields are left for manual entry (still rendered + still used to
+   *  anchor the prompt). Off (undefined) everywhere for now; flip per-section
+   *  later (e.g. check-in) without any other code change. */
+  qualitative_only?: boolean;
 };
 
 export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
@@ -348,4 +353,11 @@ export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
 
 export function promptsForPhase(phaseId: string): SectionPrompt[] {
   return SECTION_VOICE_PROMPTS[phaseId] ?? [];
+}
+
+// Synthetic answer slug under which a prompt's qualitative voice summary is
+// stored (hub-only, no PMS target). question_key = this, area_key = phase id.
+// Mirrors the existing `${slug}__follow_up` synthetic-key convention.
+export function voiceSummarySlug(promptId: string): string {
+  return `${promptId}__summary`;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SECTION_VOICE_PROMPTS } from '@/data/section-voice-prompts';
+import { SECTION_VOICE_PROMPTS, voiceSummarySlug } from '@/data/section-voice-prompts';
 import { ALL_QUESTIONS } from '../questions';
 
 // Fillable (non-media) slugs that actually live in a given phase. finding_*
@@ -46,4 +46,20 @@ describe('section-voice-prompts config guard', () => {
       });
     });
   }
+
+  it('voiceSummarySlug is unique across every prompt (per phase = area_key)', () => {
+    // The summary answer key is (area_key=phaseId, question_key=voiceSummarySlug).
+    // Prompt ids are unique within a phase, so summary slugs are too — guard it,
+    // and also assert no summary slug collides with a real fillable field slug.
+    for (const [phaseId, prompts] of Object.entries(SECTION_VOICE_PROMPTS)) {
+      const fillable = fillableSlugsInPhase(phaseId);
+      const seen = new Set<string>();
+      for (const p of prompts) {
+        const slug = voiceSummarySlug(p.id);
+        expect(seen.has(slug), `${slug} duplicated in phase ${phaseId}`).toBe(false);
+        expect(fillable.has(slug), `${slug} collides with a real field`).toBe(false);
+        seen.add(slug);
+      }
+    }
+  });
 });
