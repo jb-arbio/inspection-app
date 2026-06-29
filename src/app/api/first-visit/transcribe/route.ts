@@ -49,7 +49,11 @@ export async function POST(req: Request): Promise<Response> {
     raw = (transcription.text ?? '').trim();
   } catch (err) {
     console.error('Whisper transcription failed:', err);
-    return json({ error: 'transcription failed' }, 500);
+    const e = err as { message?: string; code?: string };
+    return json(
+      { error: 'transcription failed', detail: e?.message ?? String(err), code: e?.code ?? null },
+      500,
+    );
   }
 
   if (!raw) return json({ text: '' });

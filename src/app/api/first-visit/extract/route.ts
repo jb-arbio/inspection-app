@@ -60,7 +60,8 @@ export async function POST(req: Request): Promise<Response> {
     parsed = out ? JSON.parse(out) : null;
   } catch (err) {
     console.error('Extraction failed:', err);
-    return empty(['extraction failed']);
+    const detail = err instanceof Error ? err.message : String(err);
+    return empty(['extraction failed', detail]);
   }
 
   const result = validateExtraction(parsed, targetSlugs);
