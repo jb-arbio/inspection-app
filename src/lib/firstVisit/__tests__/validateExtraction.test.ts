@@ -93,3 +93,31 @@ describe('validateExtraction', () => {
     expect(r.summary).toHaveLength(1500);
   });
 });
+
+describe('validateExtraction — custom multi-select options', () => {
+  // fv_building_amenities_verify is a multi-select with allow_custom_options.
+  it('keeps off-list values for an allow_custom_options multi-select', () => {
+    const r = validateExtraction(
+      {
+        singles: {
+          fv_building_amenities_verify: { value: ['Sauna', 'Bike room'], confidence: 0.8 },
+        },
+        items: [],
+      },
+      ['fv_building_amenities_verify'],
+    );
+    expect(r.singles.fv_building_amenities_verify.value).toEqual(['Sauna', 'Bike room']);
+  });
+
+  it('still drops off-list values for a normal (non-custom) multi-select', () => {
+    // fv_neighbourhood_vibe_tags is multi but NOT allow_custom_options.
+    const r = validateExtraction(
+      {
+        singles: { fv_neighbourhood_vibe_tags: { value: ['totally-made-up'], confidence: 0.5 } },
+        items: [],
+      },
+      ['fv_neighbourhood_vibe_tags'],
+    );
+    expect(r.singles.fv_neighbourhood_vibe_tags?.value ?? null).toBeNull();
+  });
+});

@@ -472,6 +472,7 @@
           "type": "select",
           "options": [
             "Nuki",
+            "Akiles",
             "Bold",
             "RemoteLock",
             "Salto",
