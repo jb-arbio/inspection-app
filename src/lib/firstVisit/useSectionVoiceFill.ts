@@ -16,9 +16,6 @@ export type VoiceFillSummary = {
   promptId: string;
   singlesWritten: number;
   itemsWritten: number;
-  /** Slugs of the single (non-repeater) fields filled, so the hint can NAME
-   *  them ("Pre-filled: Room size") rather than just count them. */
-  filledSlugs: string[];
 };
 
 type Options = {
@@ -147,20 +144,10 @@ export function useSectionVoiceFill(opts: Options) {
         }
       }
       if (mounted.current && promptId) {
-        const filledSlugs = result
-          ? Array.from(
-              new Set(
-                result.writtenRows
-                  .filter((r) => r.step_index == null)
-                  .map((r) => r.question_key),
-              ),
-            )
-          : [];
         setSummary({
           promptId,
           singlesWritten: result?.singlesWritten ?? 0,
           itemsWritten: result?.itemsWritten ?? 0,
-          filledSlugs,
         });
       }
     } catch {

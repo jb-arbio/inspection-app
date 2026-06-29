@@ -497,8 +497,6 @@ export function UnitSurvey({
       if (anchor && !promptByAnchorSlug.has(anchor)) promptByAnchorSlug.set(anchor, p);
     }
   }
-  const labelBySlug = new Map(phase.questions.map((q) => [q.slug, q.label]));
-  const labelFor = (slug: string) => labelBySlug.get(slug) ?? slug;
   // Synthesize a text "question" for a prompt's qualitative voice summary so it
   // renders through the normal QuestionRow text path (caret-safe editing +
   // external-sync when voice writes it). slug = the synthetic summary key.
@@ -529,7 +527,7 @@ export function UnitSurvey({
           summaryAnswer?.value != null && String(summaryAnswer.value).trim() !== '';
         return (
           <Fragment key={`vp-${p.id}`}>
-            <VoicePromptCard prompt={p} phaseId={phase.id} fill={voiceFill} labelFor={labelFor} />
+            <VoicePromptCard prompt={p} phaseId={phase.id} fill={voiceFill} />
             {hasSummary && (
               <QuestionRow
                 question={sq}
