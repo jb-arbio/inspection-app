@@ -41,6 +41,14 @@ function normalizeValue(
 
   if (q.type === 'select' && q.multi_select) {
     if (!Array.isArray(raw)) return null;
+    // allow_custom_options fields accept new values, so keep any non-empty
+    // string rather than filtering to the preset option list.
+    if (q.allow_custom_options) {
+      const kept = raw
+        .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+        .map((v) => v.trim());
+      return kept.length ? kept : null;
+    }
     const kept = raw.filter((v) => typeof v === 'string' && q.options.includes(v));
     if (kept.length !== raw.length) warnings.push(`${q.slug}: dropped off-list option(s)`);
     return kept.length ? kept : null;

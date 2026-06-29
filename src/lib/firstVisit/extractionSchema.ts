@@ -54,6 +54,9 @@ type JsonSchema = Record<string, unknown>;
 // (for selects) its allowed options. Always nullable so the model can decline.
 function valueSchema(q: FirstVisitQuestion): JsonSchema {
   if (q.type === 'select' && q.multi_select && q.options.length > 0) {
+    // Fields that allow custom options must NOT be enum-locked — the inspector
+    // (and voice) can add new chips, so accept any string array.
+    if (q.allow_custom_options) return { type: ['array', 'null'], items: { type: 'string' } };
     return { type: ['array', 'null'], items: { type: 'string', enum: q.options } };
   }
   if (q.type === 'select' && q.options.length > 0) {

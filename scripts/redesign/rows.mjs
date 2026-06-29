@@ -93,7 +93,7 @@ export const PHASES = [
     { slug: 'fv_step_lock_type', label: 'Lock type', type: 'select',
       options: ['Smart Lock', 'Keypad', 'Ring To Open', 'Call To Open', 'Chip', 'Physical Key'], required: true, group_id: 'checkin_step' },
     { slug: 'fv_step_smart_lock_provider', label: 'Smart lock provider', type: 'select',
-      options: ['Nuki', 'Bold', 'RemoteLock', 'Salto', 'EVVA', 'Other'], required: false, group_id: 'checkin_step' },
+      options: ['Nuki', 'Akiles', 'Bold', 'RemoteLock', 'Salto', 'EVVA', 'Other'], required: false, group_id: 'checkin_step' },
     { slug: 'fv_step_smart_lock_device_id', label: 'Smart lock device ID / serial', type: 'text', required: false, group_id: 'checkin_step' },
     { slug: 'fv_step_lock_brand', label: 'Lock brand / manufacturer', type: 'text', required: false, group_id: 'checkin_step' },
     { slug: 'fv_step_lock_classification', label: 'Lock classification', type: 'select',
