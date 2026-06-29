@@ -262,6 +262,15 @@ export function QuestionRow({
 
   const isMulti = !!question.multi_select;
   const selectedOptions: string[] = isMulti && Array.isArray(value) ? (value as string[]) : [];
+  // Multi-select prefill: hub/voice suggestions for chip fields arrive as an
+  // array. PrefilledField (which owns the scalar Accept banner) is bypassed for
+  // multi-selects, so render a matching Accept affordance here — otherwise pill
+  // suggestions are written but never shown. Hide once the inspector has a
+  // selection (accepted or chosen), mirroring the scalar banner.
+  const multiSuggestion: string[] = isMulti && Array.isArray(hubValue)
+    ? (hubValue as unknown[]).filter((v): v is string => typeof v === 'string' && v !== '')
+    : [];
+  const showMultiSuggestion = multiSuggestion.length > 0 && selectedOptions.length === 0;
 
   return (
     <div className="flex flex-col gap-1">
@@ -273,6 +282,28 @@ export function QuestionRow({
           </label>
           {question.description && (
             <p className="text-xs text-gray-500">{question.description}</p>
+          )}
+          {showMultiSuggestion && (
+            <div
+              className={`flex items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-sm ${
+                justFilled ? 'ring-2 ring-indigo-300' : ''
+              }`}
+            >
+              <span className="rounded bg-indigo-200 px-1.5 py-0.5 text-xs font-medium text-indigo-900">
+                {justFilled ? '✦ from voice' : 'Pre-filled'}
+              </span>
+              <span className="truncate text-indigo-900">{multiSuggestion.join(', ')}</span>
+              <button
+                type="button"
+                tabIndex={-1}
+                className="ml-auto rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:bg-indigo-800"
+                onClick={() =>
+                  onChange(question, { value: multiSuggestion, wasAcceptedAsIs: true }, stepIndex)
+                }
+              >
+                Accept
+              </button>
+            </div>
           )}
           <MultiSelectChips
             id={`q-${question.slug}${stepIndex == null ? '' : `-${stepIndex}`}`}
