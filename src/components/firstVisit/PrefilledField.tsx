@@ -126,6 +126,10 @@ const TEXT_DEBOUNCE_MS = 600;
 
 export function PrefilledField({ question, hubValue, value, onChange, suggestionConfidence, justFilled }: PrefilledFieldProps) {
   const hasHub = hubValue !== undefined && hubValue !== null && hubValue !== '';
+  // Once the field has a value (the inspector Accepted the suggestion or typed
+  // their own), the "Pre-filled / Accept" banner has done its job and should
+  // disappear — leaving just the answered field.
+  const hasValue = value !== undefined && value !== null && value !== '';
   const lowConfidence =
     typeof suggestionConfidence === 'number' && suggestionConfidence < LOW_CONF_THRESHOLD;
   const id = `q-${question.slug}`;
@@ -260,16 +264,16 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
         <p className="text-xs text-gray-500">{question.description}</p>
       )}
 
-      {hasHub && (
+      {hasHub && !hasValue && (
         <div
-          className={`flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2 text-sm transition-shadow ${
+          className={`flex items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-sm transition-shadow ${
             justFilled ? 'ring-2 ring-indigo-300' : ''
           }`}
         >
-          <span className="rounded bg-yellow-200 px-1.5 py-0.5 text-xs font-medium">
+          <span className="rounded bg-indigo-200 px-1.5 py-0.5 text-xs font-medium text-indigo-900">
             {justFilled ? '✦ from voice' : 'Pre-filled'}
           </span>
-          <span className="truncate text-yellow-900">{String(hubValue)}</span>
+          <span className="truncate text-indigo-900">{String(hubValue)}</span>
           {lowConfidence && (
             <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
               check this
@@ -278,7 +282,7 @@ export function PrefilledField({ question, hubValue, value, onChange, suggestion
           <button
             type="button"
             tabIndex={-1}
-            className="ml-auto rounded-md bg-yellow-300 px-3 py-2 text-sm font-medium hover:bg-yellow-400 active:bg-yellow-500"
+            className="ml-auto rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:bg-indigo-800"
             onClick={() => {
               onChange({ value: hubValue, wasAcceptedAsIs: true });
               pulseImmediate();

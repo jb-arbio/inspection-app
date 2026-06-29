@@ -38,6 +38,19 @@ describe('PrefilledField — accept', () => {
     });
   });
 
+  it('hides the Pre-filled banner once the field has a value (accepted/edited)', () => {
+    render(
+      <PrefilledField
+        question={wifi}
+        hubValue="HelloRouter"
+        value="HelloRouter"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/Pre-filled/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Accept/i })).not.toBeInTheDocument();
+  });
+
   it('typing a different value calls onChange with wasAcceptedAsIs=false', async () => {
     const onChange = vi.fn();
     render(
