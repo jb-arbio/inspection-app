@@ -99,7 +99,7 @@ export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
     {
       id: 'p4_checkin_step',
       label:
-        'Go step by step through check-in. For each step: its name, the access point, the lock type and provider, the lock brand, whether it is primary or backup, and how keys are stored.',
+        'Walk through check-in. Go step by step — for each step: its name, the access point, the lock type and provider, the lock brand, whether it is primary or backup, and how keys are stored. Then overall: how complex is check-in, and any notes on the whole process.',
       target_slugs: [
         'fv_step_name',
         'fv_step_access_point',
@@ -109,12 +109,9 @@ export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
         'fv_step_lock_classification',
         'fv_step_key_storage_method',
         'fv_step_storage_brand',
+        'fv_checkin_complexity',
+        'fv_checkin_notes_overall',
       ],
-    },
-    {
-      id: 'p4_checkin_overall',
-      label: 'Overall, how complex is check-in, and any notes on the whole process?',
-      target_slugs: ['fv_checkin_complexity', 'fv_checkin_notes_overall'],
     },
   ],
 
@@ -165,11 +162,8 @@ export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
         'fv_fire_safety_concerns',
       ],
     },
-    {
-      id: 'p5_common_areas',
-      label: 'Which common areas or shared building facilities are there?',
-      target_slugs: ['fv_common_area'],
-    },
+    // (No voice prompt for fv_common_area — a single multi-select chip picker is
+    // faster to tap than to dictate.)
   ],
 
   // 6 · Cleaning & laundry
@@ -326,14 +320,8 @@ export const SECTION_VOICE_PROMPTS: Record<string, SectionPrompt[]> = {
     },
   ],
 
-  // 13 · Unit amenities & details
-  '13': [
-    {
-      id: 'p13_blackout',
-      label: 'Are there blackout curtains or blinds — in all rooms, bedrooms only, or none?',
-      target_slugs: ['fv_blackout_curtains'],
-    },
-  ],
+  // 13 · Unit amenities & details — no voice prompt: fv_blackout_curtains is a
+  // single select, faster to tap than to dictate.
 
   // 15 · Final assessment / readiness
   '15': [
