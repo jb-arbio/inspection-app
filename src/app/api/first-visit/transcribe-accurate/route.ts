@@ -44,6 +44,12 @@ export async function POST(req: Request): Promise<Response> {
     return json({ text: (transcription.text ?? '').trim() });
   } catch (err) {
     console.error('Accurate transcription failed:', err);
-    return json({ error: 'transcription failed' }, 500);
+    // Surface the real cause (e.g. model access, invalid key, audio rejected)
+    // so failures are diagnosable instead of a generic "transcription failed".
+    const e = err as { message?: string; code?: string; status?: number };
+    return json(
+      { error: 'transcription failed', detail: e?.message ?? String(err), code: e?.code ?? null },
+      500,
+    );
   }
 }
