@@ -10,7 +10,7 @@ export async function POST(
 ) {
   const { dealId } = await params;
   const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 503 });
 
   const body = await req.json().catch(() => ({}));
   const display_name = String(body?.display_name ?? '').trim();

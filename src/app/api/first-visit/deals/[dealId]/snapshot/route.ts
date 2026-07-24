@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { dealId } = await params;
   const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 503 });
 
   const { data: deal } = await supabase
     .from('deals').select('*').eq('id', dealId).single();

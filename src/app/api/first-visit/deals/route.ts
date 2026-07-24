@@ -4,7 +4,7 @@ import { getHubServerClient, getHubRequestClient } from '@/lib/firstVisit/hubSup
 
 export async function GET() {
   const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 503 });
   const { data, error } = await supabase
     .from('deals')
     .select('id, name, created_at')
@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const supabase = getHubServerClient((await getHubRequestClient()) ?? getHubSupabase());
-  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: 'no-hub' }, { status: 503 });
 
   const body = await req.json().catch(() => ({}));
   const name = String(body?.name ?? '').trim();
